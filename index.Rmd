@@ -1,0 +1,239 @@
+---
+title: "COVID-19 ZA"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    navbar:
+      - { title: "painblogR", href: "https://www.painblogr.org", align: right }
+    social: [ "twitter", "facebook", "menu" ]
+    source_code: "https://github.com/kamermanpr/covid_19_dashboard.git"
+---
+
+```{r setup, include = FALSE}
+# Load libraries
+library(flexdashboard)
+library(tidyverse)
+library(sf)
+library(ggiraph)
+library(plotly)
+
+# Import data
+data <- read_csv('https://raw.githubusercontent.com/kamermanpr/covid_19_dataZA/master/data.csv')
+
+# knitr options
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+Row
+----------
+
+### Cumulative number of cases
+
+```{r valuebox_1}
+if(data$date[[nrow(data)]] == Sys.Date()) {
+  cases <- data %>% 
+    filter(date == Sys.Date()) %>% 
+    summarise(total = sum(n_cases)) %>%
+    .$total
+} else {
+  cases <- data %>% 
+    filter(date == Sys.Date() - 1) %>% 
+    summarise(total = sum(n_cases)) %>%
+    .$total
+}
+
+valueBox(cases, 
+         icon = "fa-stethoscope",
+         color = ifelse(cases > 100, 
+                        yes = "warning", 
+                        no = "primary"))
+```
+
+### Total number of tests
+
+```{r valuebox_2}
+if(data$date[[nrow(data)]] == Sys.Date()) {
+  tests <- data %>% 
+    filter(date == Sys.Date()) %>% 
+    .$n_tests %>% 
+    unique(.)
+} else {
+  tests <- data %>% 
+    filter(date == Sys.Date() - 1) %>% 
+    .$n_tests %>% 
+    unique(.)
+}
+
+valueBox(tests, 
+         icon = "fa-notes-medical")
+```
+
+### Cumulative number of deaths
+
+```{r valuebox_3}
+if(data$date[[nrow(data)]] == Sys.Date()) {
+  deaths <- data %>% 
+    filter(date == Sys.Date()) %>% 
+    summarise(total = sum(n_deaths)) %>%
+    .$total
+} else {
+  deaths <- data %>% 
+    filter(date == Sys.Date() - 1) %>% 
+    summarise(total = sum(n_deaths)) %>%
+    .$total
+}
+
+valueBox(deaths, 
+         icon = "fa-sad-tear", 
+         color = ifelse(deaths > 0, 
+                        yes = "danger", 
+                        no = "primary"))
+```
+
+
+Row
+----------
+
+### Cumulative number of cases over time
+
+```{r cases_by_time}
+# Calculate total cases per date
+foo <- data %>% 
+    group_by(date) %>% 
+    summarise(total = sum(n_cases)) 
+
+# Add total cases as a column and pivot provinces to wide format
+data_wide <- data %>% 
+    left_join(foo) %>% 
+    pivot_wider(names_from = 'provinces',
+                values_from = 'n_cases') %>% 
+    mutate(date = as.Date(as.character(date)))
+
+# Plot the data using plotly
+## (damn I hate plotly's api)
+data_wide %>%     
+    plot_ly(x = ~date, 
+            y = ~total, 
+            name = 'Total',
+            type = 'scatter', 
+            mode = 'lines+markers',
+            marker = list(size = 10),
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
+    layout(xaxis = list(title = 'Date',
+                        titlefont = list(size = 20), 
+                        tickformat = '%Y-%m-%d',
+                        nticks = nrow(data_wide)),
+           yaxis = list(title = 'Cumulative number of cases',
+                        titlefont = list(size = 20))) %>% 
+    add_trace(y = ~FS, name = 'Free State', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~EC, name = 'Eastern Cape', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~GP, name = 'Gauteng', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~KZN, name = 'KwaZulu-Natal',
+              visible = 'legendonly') %>% 
+    add_trace(y = ~LP, name = 'Limpopo', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~MP, name = 'Mpumalanga', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~NW, name = 'North West', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~NC, name = 'Northern Cape', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~WC, name = 'Western Cape', 
+              visible = 'legendonly')
+```
+
+### Number of new cases in the last 24-hours, by province
+
+```{r}
+# Read shape file
+za_map <- st_read('data-shp/zaf_admin1.shp', quiet = TRUE)
+
+# Simplify shapefile to a managable size
+za_map <- za_map %>%
+    # Select columns
+    select(ADM1_ID) %>%
+    # Reduce size
+    st_simplify(dTolerance = 0.03) 
+
+# Simplify data to latest date
+data_map <- data %>% 
+  filter(date == max(date)) 
+
+# Fix za_map admin_ID column
+za_map <- za_map %>% 
+  rename(provinces = ADM1_ID) %>% 
+  mutate(provinces = as.character(provinces)) %>% 
+  mutate(provinces = case_when(
+    provinces == 'LIM' ~ 'LP',
+    provinces == 'GT' ~ 'GP',
+    TRUE ~ provinces
+  )) %>% 
+  # Join with map data
+  left_join(data_map) %>% 
+  arrange(provinces)
+
+# Process data
+za_map <- za_map %>% 
+  # Add full province names
+  mutate(province_names = case_when(
+    provinces == 'WC' ~ 'Western Cape',
+    provinces == 'EC' ~ 'Eastern Cape',
+    provinces == 'NC' ~ 'Northern Cape',
+    provinces == 'FS' ~ 'Free State',
+    provinces == 'KZN' ~ 'KwaZulu-Natal',
+    provinces == 'NW' ~ 'North West',
+    provinces == 'GP' ~ 'Gauteng',
+    provinces == 'MP' ~ 'Mpumalanga',
+    provinces == 'LP' ~ 'Limpopo'
+  )) 
+
+bar <- data %>% 
+  filter(date != max(date)) %>% 
+  filter(date == max(date)) %>% 
+  arrange(provinces) %>% 
+  select(provinces, n_cases, n_deaths) %>% 
+  rename(n_cases24 = n_cases,
+         n_deaths24 = n_deaths)
+
+za_map <- za_map %>% 
+  arrange(provinces) %>% 
+  left_join(bar) %>% 
+  mutate(delta_cases = n_cases - n_cases24,
+         delta_deaths = n_deaths - n_deaths24) %>% 
+  # Add a tooltip
+  mutate(tooltip = paste0('<b>', province_names, '</b><br>',
+                          '<em>New cases: </em>', delta_cases, '<br>',
+                          '<em>New deaths: </em>', delta_deaths))
+
+# Generate plot object
+gg_province <- ggplot(data = za_map) +
+    geom_sf_interactive(aes(tooltip = tooltip,
+                            fill = delta_cases), 
+             color = '#000000',
+             size = 0.25) +
+    labs(subtitle = str_glue('Date: {data$date[[nrow(data)]]}'),
+         caption = '* Move cursor over each province to see province-specific data') +
+    scale_fill_distiller(name = 'New cases', 
+                         direction = 1) +
+    theme_void() +
+    theme(panel.grid = element_line(colour = '#FFFFFF'),
+          plot.caption = element_text(face = 'italic',
+                                      hjust = 0))
+
+ggiraph(ggobj = gg_province,
+        height_svg = 7,
+        hover_css = 'cursor:pointer;
+        fill:#FFFFFF;
+        stroke:#FFFFFF;',
+        tooltip_extra_css = 'background-color:#000000;
+font-family:sans-serif,arial;
+font-size:80%;
+color:#FFFFFF;
+padding:10px;
+border-radius:10px 10px 10px 10px;')
+```
