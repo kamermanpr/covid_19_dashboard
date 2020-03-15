@@ -2,6 +2,7 @@
 title: "COVID-19 ZA"
 output: 
   flexdashboard::flex_dashboard:
+    self_contained: false
     orientation: rows
     navbar:
       - { title: "painblogR", href: "https://www.painblogr.org", align: right }
