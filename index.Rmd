@@ -27,6 +27,18 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE)
 ```
 
+<style type="text/css">
+
+.chart-title {
+  border-bottom: 1px solid #d7d7d7;
+  color: #000000;
+  font-size: 20px;
+  font-weight: 300;
+  padding: 7px 10px 4px;
+}
+
+</style>
+
 Row {data-height=50}
 ----------
 Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}. For the moment, the site reports on the cumulative number of cases in the country and each province (left panel), and the number of new cases and deaths per day, by province (right panel).
@@ -152,7 +164,7 @@ data_wide %>%
               visible = 'legendonly')
 ```
 
-### Number of new cases in the last 24-hours, by province
+### Number of new cases in the last 24-hours, by province {.no-padding}
 
 ```{r}
 # Read shape file
