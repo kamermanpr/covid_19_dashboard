@@ -10,6 +10,18 @@ output:
     source_code: "https://github.com/kamermanpr/covid_19_dashboard.git"
 ---
 
+<style type="text/css">
+
+.chart-title {
+  border-bottom: 1px solid #d7d7d7;
+  color: #000000;
+  font-size: 20px;
+  font-weight: 300;
+  padding: 7px 10px 4px;
+}
+
+</style>
+
 ```{r setup, include = FALSE}
 # Load libraries
 library(flexdashboard)
@@ -27,28 +39,16 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE)
 ```
 
-<style type="text/css">
-
-.chart-title {
-  border-bottom: 1px solid #d7d7d7;
-  color: #000000;
-  font-size: 20px;
-  font-weight: 300;
-  padding: 7px 10px 4px;
-}
-
-</style>
-
 Row {data-height=50}
 ----------
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}. For the moment, the site reports on the cumulative number of cases in the country and each province (left panel), and the number of new cases and deaths per day, by province (right panel).
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}. For the moment, the site reports on the cumulative number of cases in the country and each province (left panel), and the number of new cases per day, by province (right panel).
 
 Row
 ----------
 
 ### Cumulative number of cases
 
-```{r valuebox_1}
+```{r}
 if(data$date[[nrow(data)]] == Sys.Date()) {
   cases <- data %>% 
     filter(date == Sys.Date()) %>% 
@@ -70,7 +70,7 @@ valueBox(cases,
 
 ### Total number of tests
 
-```{r valuebox_2}
+```{r}
 if(data$date[[nrow(data)]] == Sys.Date()) {
   tests <- data %>% 
     filter(date == Sys.Date()) %>% 
@@ -89,7 +89,7 @@ valueBox(tests,
 
 ### Cumulative number of deaths
 
-```{r valuebox_3}
+```{r}
 if(data$date[[nrow(data)]] == Sys.Date()) {
   deaths <- data %>% 
     filter(date == Sys.Date()) %>% 
@@ -115,7 +115,7 @@ Row
 
 ### Cumulative number of cases over time
 
-```{r cases_by_time}
+```{r}
 # Calculate total cases per date
 foo <- data %>% 
     group_by(date) %>% 
@@ -213,19 +213,16 @@ bar <- data %>%
   filter(date != max(date)) %>% 
   filter(date == max(date)) %>% 
   arrange(provinces) %>% 
-  select(provinces, n_cases, n_deaths) %>% 
-  rename(n_cases24 = n_cases,
-         n_deaths24 = n_deaths)
+  select(provinces, n_cases) %>% 
+  rename(n_cases24 = n_cases)
 
 za_map <- za_map %>% 
   arrange(provinces) %>% 
   left_join(bar) %>% 
-  mutate(delta_cases = n_cases - n_cases24,
-         delta_deaths = n_deaths - n_deaths24) %>% 
+  mutate(delta_cases = n_cases - n_cases24) %>% 
   # Add a tooltip
   mutate(tooltip = paste0('<b>', province_names, '</b><br>',
-                          '<em>New cases: </em>', delta_cases, '<br>',
-                          '<em>New deaths: </em>', delta_deaths))
+                          '<em>New cases: </em>', delta_cases, '<br>'))
 
 # Generate plot object
 gg_province <- ggplot(data = za_map) +
@@ -253,4 +250,65 @@ font-size:80%;
 color:#FFFFFF;
 padding:10px;
 border-radius:10px 10px 10px 10px;')
+```
+
+```{r eval = FALSE}
+# Row 
+# ----------
+# ### Proportion of cases resulting in death
+
+# Process data
+perc_deaths <- data %>% 
+  select(-provinces, -n_tests) %>% 
+  group_by(date) %>% 
+  summarise(total_cases = sum(n_cases),
+            total_deaths = sum(n_deaths),
+            percent = round(100 * (total_deaths/total_cases), 2)) 
+
+# Plot the data using plotly
+perc_deaths %>%     
+    plot_ly(x = ~date, 
+            y = ~percent, 
+            name = 'deaths',
+            type = 'scatter', 
+            mode = 'lines+markers',
+            marker = list(size = 10),
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Percent deaths: <b>%{y}%")) %>% 
+    layout(xaxis = list(title = 'Date',
+                        titlefont = list(size = 20), 
+                        tickformat = '%Y-%m-%d',
+                        nticks = nrow(pos_tests)),
+           yaxis = list(title = 'Percent cases resulting in death (%)',
+                        titlefont = list(size = 20),
+                        range = c(0, 5))) 
+```
+
+```{r eval = FALSE}
+# Row 
+# ----------
+# ### Proportion of positive tests
+
+# Process data
+perc_tests <- data %>% 
+  select(-provinces, -n_deaths) %>% 
+  group_by(date, n_tests) %>% 
+  summarise(total_cases = sum(n_cases)) %>% 
+  ungroup() %>% 
+  mutate(percent = round(100 * (total_cases / n_tests), 2))
+
+# Plot the data using plotly
+perc_tests %>%     
+    plot_ly(x = ~date, 
+            y = ~percent, 
+            name = 'tests',
+            type = 'scatter', 
+            mode = 'lines+markers',
+            marker = list(size = 10),
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Percent positive: <b>%{y}%")) %>% 
+    layout(xaxis = list(title = 'Date',
+                        titlefont = list(size = 20), 
+                        tickformat = '%Y-%m-%d',
+                        nticks = nrow(pos_tests)),
+           yaxis = list(title = 'Percent positive tests (%)',
+                        titlefont = list(size = 20))) 
 ```
