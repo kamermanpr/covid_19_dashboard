@@ -27,6 +27,10 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE)
 ```
 
+Row {data-height=50}
+----------
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}. For the moment, the site reports on the cumulative number of cases in the country and each province (left panel), and the number of new cases and deaths per day, by province (right panel).
+
 Row
 ----------
 
@@ -227,7 +231,7 @@ gg_province <- ggplot(data = za_map) +
                                       hjust = 0))
 
 ggiraph(ggobj = gg_province,
-        height_svg = 7,
+        height_svg = 6.5,
         hover_css = 'cursor:pointer;
         fill:#FFFFFF;
         stroke:#FFFFFF;',
