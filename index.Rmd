@@ -68,10 +68,7 @@ if(data$date[[nrow(data)]] == Sys.Date()) {
 }
 
 valueBox(cases, 
-         icon = "fa-stethoscope",
-         color = ifelse(cases > 100, 
-                        yes = "warning", 
-                        no = "primary"))
+         icon = "fa-stethoscope")
 ```
 
 ### Total number of tests
