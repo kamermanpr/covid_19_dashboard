@@ -89,7 +89,7 @@ if(data$date[[nrow(data)]] == Sys.Date()) {
     unique(.)
 }
 
-valueBox('No data available', 
+valueBox(tests, 
          icon = "fa-notes-medical")
 ```
 
