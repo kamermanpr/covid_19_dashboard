@@ -27,6 +27,7 @@ output:
 # Load libraries
 library(flexdashboard)
 library(tidyverse)
+library(lubridate)
 library(sf)
 library(ggiraph)
 library(plotly)
@@ -129,7 +130,7 @@ data_wide <- data %>%
     left_join(foo) %>% 
     pivot_wider(names_from = 'provinces',
                 values_from = 'n_cases') %>% 
-    mutate(date = as.Date(date, format = '%Y-%m-%d'))
+    mutate(date = dmy(date))
 
 # Plot the data using plotly
 ## (damn I hate plotly's api)
@@ -147,9 +148,9 @@ data_wide %>%
                         nticks = nrow(data_wide)),
            yaxis = list(title = 'Cumulative number of cases',
                         titlefont = list(size = 20))) %>% 
-    add_trace(y = ~FS, name = 'Free State', 
-              visible = 'legendonly') %>% 
     add_trace(y = ~EC, name = 'Eastern Cape', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~FS, name = 'Free State', 
               visible = 'legendonly') %>% 
     add_trace(y = ~GP, name = 'Gauteng', 
               visible = 'legendonly') %>% 
@@ -423,7 +424,54 @@ plot_ly(data = data_jhu2,
             visible = 'legendonly')
 ```
 
-###
+### Daily count of new cases and recoveries
+
+```{r}
+# Calculate cumulative totals
+data_daily <- data %>% 
+  select(date, n_cases, n_deaths, n_recoveries) %>% 
+  group_by(date) %>% 
+  summarise(n_cases = sum(n_cases),
+            n_deaths = sum(n_deaths),
+            n_recoveries = sum(n_recoveries)) %>% 
+  ungroup()
+
+# Top slice the first row of data
+top_slice <- data_daily %>% 
+  filter(date == '12/3/2020') 
+
+# Calculate daily totals 
+data_daily <- data_daily %>% 
+  mutate(n_cases = n_cases - lag(n_cases),
+         n_deaths = n_deaths - lag(n_deaths),
+         n_recoveries = n_recoveries - lag(n_recoveries)) %>% 
+  filter(date != '12/3/2020') %>% 
+  # Add back the top sliced data
+  bind_rows(top_slice) %>% 
+  arrange(date) %>% 
+  mutate(date = dmy(date))
+
+# Plot
+plot_ly(data = data_daily,
+       x = ~date,
+       y = ~n_cases,
+       type = 'bar', 
+       name = 'Cases', 
+       hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}"),
+       marker = list(color = 'rgb(49,130,189)',
+                     size = 10)) %>% 
+  layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Date',
+                        titlefont = list(size = 20), 
+                        nticks = nrow(data_daily)),
+           yaxis = list(title = 'Daily count',
+                        titlefont = list(size = 20))) %>% 
+  add_trace(y = ~n_recoveries, 
+            name = 'Recoveries', 
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Recoveries: <b>%{y}"),
+            marker = list(color = 'rgb(204,204,204)'),
+            visible = 'legendonly')
+```
 
 ```{r eval = FALSE}
 # Row 
