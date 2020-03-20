@@ -168,7 +168,7 @@ data_wide %>%
               visible = 'legendonly')
 ```
 
-### Number of new cases in the last 24-hours, by province {.no-padding}
+### Daily count of new cases and recoveries, by province {.no-padding}
 
 ```{r}
 # Read shape file
@@ -217,16 +217,19 @@ bar <- data %>%
   filter(date != max(date)) %>% 
   filter(date == max(date)) %>% 
   arrange(provinces) %>% 
-  select(provinces, n_cases) %>% 
-  rename(n_cases24 = n_cases)
+  select(provinces, n_cases, n_recoveries) %>% 
+  rename(n_cases24 = n_cases,
+         n_recoveries24 = n_recoveries)
 
 za_map <- za_map %>% 
   arrange(provinces) %>% 
   left_join(bar) %>% 
-  mutate(delta_cases = n_cases - n_cases24) %>% 
+  mutate(delta_cases = n_cases - n_cases24,
+         delta_recoveries = n_recoveries - n_recoveries24) %>% 
   # Add a tooltip
   mutate(tooltip = paste0('<b>', province_names, '</b><br>',
-                          '<em>New cases: </em>', delta_cases, '<br>'))
+                          '<em>New cases: </em>', delta_cases, '<br>',
+                          '<em>Recoveries: </em>', delta_recoveries, '<br>'))
 
 # Generate plot object
 gg_province <- ggplot(data = za_map) +
@@ -424,7 +427,7 @@ plot_ly(data = data_jhu2,
             visible = 'legendonly')
 ```
 
-### Daily count of new cases and recoveries
+### Daily count of new cases and recoveries, for the country
 
 ```{r}
 # Calculate cumulative totals
