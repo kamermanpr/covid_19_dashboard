@@ -129,8 +129,7 @@ foo <- data %>%
 data_wide <- data %>% 
     left_join(foo) %>% 
     pivot_wider(names_from = 'provinces',
-                values_from = 'n_cases') %>% 
-    mutate(date = dmy(date))
+                values_from = 'n_cases') 
 
 # Plot the data using plotly
 ## (damn I hate plotly's api)
@@ -441,18 +440,18 @@ data_daily <- data %>%
 
 # Top slice the first row of data
 top_slice <- data_daily %>% 
-  filter(date == '12/3/2020') 
+  filter(date == '2020-3-12') 
 
 # Calculate daily totals 
 data_daily <- data_daily %>% 
   mutate(n_cases = n_cases - lag(n_cases),
          n_deaths = n_deaths - lag(n_deaths),
          n_recoveries = n_recoveries - lag(n_recoveries)) %>% 
-  filter(date != '12/3/2020') %>% 
+  filter(date != '2020-03-12') %>% 
   # Add back the top sliced data
   bind_rows(top_slice) %>% 
   arrange(date) %>% 
-  mutate(date = dmy(date))
+  mutate(date = as.Date(date))
 
 # Plot
 plot_ly(data = data_daily,
