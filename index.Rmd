@@ -167,6 +167,8 @@ data_wide %>%
     add_trace(y = ~NC, name = 'Northern Cape', 
               visible = 'legendonly') %>% 
     add_trace(y = ~WC, name = 'Western Cape', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~Unknown, name = 'Unknown', 
               visible = 'legendonly')
 ```
 
@@ -202,6 +204,8 @@ za_map <- za_map %>%
 
 # Process data
 za_map <- za_map %>% 
+  # Filter out unknown
+  filter(provinces != 'Unknown') %>% 
   # Add full province names
   mutate(province_names = case_when(
     provinces == 'WC' ~ 'Western Cape',
@@ -553,7 +557,7 @@ perc_tests %>%
     layout(xaxis = list(title = 'Date',
                         titlefont = list(size = 20), 
                         tickformat = '%Y-%m-%d',
-                        nticks = nrow(pos_tests)),
+                        nticks = nrow(perc_tests)),
            yaxis = list(title = 'Percent positive tests (%)',
                         titlefont = list(size = 20))) 
 ```
