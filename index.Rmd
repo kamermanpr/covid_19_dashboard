@@ -133,9 +133,9 @@ valueBox(recover,
          color = "green")
 ```
 
-### Total tests
 
-```{r}
+```{r eval = FALSE}
+### Total tests
 if(data$date[[nrow(data)]] == Sys.Date()) {
   tests <- data %>% 
     filter(date == Sys.Date()) %>% 
