@@ -48,15 +48,15 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE)
 ```
 
-Row {data-height=70}
+Row {data-height=100}
 ----------
 
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), and iii) the number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel).
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), iii) the cumulative number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel), and the total number of new cases per day for the country as a whole (bottom right panel).
 
 Row
 ----------
 
-### Cumulative number of cases
+### Total cases
 
 ```{r}
 if(data$date[[nrow(data)]] == Sys.Date()) {
@@ -75,7 +75,65 @@ valueBox(cases,
          icon = "fa-stethoscope")
 ```
 
-### Total number of tests
+### Compound daily growth
+
+```{r}
+rate <- data %>% 
+  group_by(date) %>% 
+  summarise(total = sum(n_cases))
+
+time_period = 1/(nrow(rate) - 1)
+first_value = first(rate$total)
+last_value = last(rate$total)
+
+cdgr <- round(100 * (((last_value / first_value)^time_period) -1))
+
+valueBox(paste0(cdgr, '%'), 
+         icon = "fa-chart-line")
+
+```
+
+### Total deaths
+
+```{r}
+if(data$date[[nrow(data)]] == Sys.Date()) {
+  deaths <- data %>% 
+    filter(date == Sys.Date()) %>% 
+    summarise(total = sum(n_deaths)) %>%
+    .$total
+} else {
+  deaths <- data %>% 
+    filter(date == Sys.Date() - 1) %>% 
+    summarise(total = sum(n_deaths)) %>%
+    .$total
+}
+
+valueBox(deaths, 
+         icon = "fa-sad-tear", 
+         color = "#CC0000")
+```
+
+### Total recoveries
+
+```{r}
+if(data$date[[nrow(data)]] == Sys.Date()) {
+  recover <- data %>% 
+    filter(date == Sys.Date()) %>% 
+    summarise(total = sum(n_recoveries)) %>%
+    .$total
+} else {
+  recover <- data %>% 
+    filter(date == Sys.Date() - 1) %>% 
+    summarise(total = sum(n_recoveries)) %>%
+    .$total
+}
+
+valueBox(recover, 
+         icon = "fa-smile", 
+         color = "green")
+```
+
+### Total tests
 
 ```{r}
 if(data$date[[nrow(data)]] == Sys.Date()) {
@@ -93,29 +151,6 @@ if(data$date[[nrow(data)]] == Sys.Date()) {
 valueBox(tests, 
          icon = "fa-notes-medical")
 ```
-
-### Cumulative number of deaths
-
-```{r}
-if(data$date[[nrow(data)]] == Sys.Date()) {
-  deaths <- data %>% 
-    filter(date == Sys.Date()) %>% 
-    summarise(total = sum(n_deaths)) %>%
-    .$total
-} else {
-  deaths <- data %>% 
-    filter(date == Sys.Date() - 1) %>% 
-    summarise(total = sum(n_deaths)) %>%
-    .$total
-}
-
-valueBox(deaths, 
-         icon = "fa-sad-tear", 
-         color = ifelse(deaths > 0, 
-                        yes = "danger", 
-                        no = "primary"))
-```
-
 
 Row
 ----------
