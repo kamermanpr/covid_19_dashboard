@@ -117,17 +117,9 @@ valueBox(deaths,
 ### Total recoveries
 
 ```{r}
-if(data$date[[nrow(data)]] == Sys.Date()) {
-  recover <- data %>% 
-    filter(date == Sys.Date()) %>% 
+recover <- data %>% 
     summarise(total = sum(n_recoveries)) %>%
     .$total
-} else {
-  recover <- data %>% 
-    filter(date == Sys.Date() - 1) %>% 
-    summarise(total = sum(n_recoveries)) %>%
-    .$total
-}
 
 valueBox(recover, 
          icon = "fa-smile", 
@@ -165,14 +157,19 @@ foo <- data %>%
     summarise(total = sum(n_cases)) 
 
 # Add total cases as a column and pivot provinces to wide format
-data_wide <- data %>% 
-    left_join(foo) %>% 
+data_cases_wide <- data %>% 
+    left_join(foo) %>%
+    complete(date, provinces, fill = list(n_cases = 0, 
+                                          n_deaths = 0,
+                                          n_recoveries = 0)) %>% 
+    fill(n_tests, total, .direction = 'down') %>% 
+    select(date, provinces, n_cases, total) %>% 
     pivot_wider(names_from = 'provinces',
                 values_from = 'n_cases') 
 
 # Plot the data using plotly
 ## (damn I hate plotly's api)
-data_wide %>%     
+data_cases_wide %>%     
     plot_ly(x = ~date, 
             y = ~total, 
             name = 'Total',
@@ -183,7 +180,7 @@ data_wide %>%
     layout(font = list(family = 'Arial'),
            xaxis = list(title = 'Date',
                         titlefont = list(size = 20), 
-                        nticks = nrow(data_wide)),
+                        nticks = nrow(data_cases_wide)),
            yaxis = list(title = 'Cumulative number of cases',
                         titlefont = list(size = 20))) %>% 
     add_trace(y = ~EC, name = 'Eastern Cape', 
@@ -442,6 +439,7 @@ plot_ly(data = data_jhu2,
         y = ~za_count.100k,
         name = 'South Africa',
         type = 'scatter',
+        marker = list(size = 10),
         mode = 'lines+markers',
         hovertemplate = paste("<b>Days since first case(s): </b>%{x}<br><b>Cases/100,000 pop: <b>%{y}")) %>% 
     layout(font = list(family = 'Arial'),
@@ -494,8 +492,11 @@ data_daily <- data_daily %>%
   # Add back the top sliced data
   bind_rows(top_slice) %>% 
   arrange(date) %>% 
-  mutate(date = as.Date(date))
-
+  mutate(date = as.Date(date)) %>% 
+  # Remove negative n_recoveries values
+  mutate(n_recoveries = ifelse(n_recoveries < 0,
+                               yes = 0,
+                               no = n_recoveries)) 
 # Plot
 plot_ly(data = data_daily,
        x = ~date,
