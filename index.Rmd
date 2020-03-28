@@ -49,10 +49,10 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE)
 ```
 
-Row {data-height=100}
+Row {data-height=150}
 ----------
 
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), iii) the cumulative number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel), and the total number of new cases per day for the country as a whole (bottom right panel).
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), iii) the cumulative number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel), and the total number of new cases per day for the country as a whole (bottom right panel).<br><br>**Note:** These data in no way reflect the prevalence of the disease. Moreover, because testing densities and strategies differ between locales, direct comparisons between countries is fraught. . 
 
 Row
 ----------
@@ -63,12 +63,12 @@ Row
 if(data$date[[nrow(data)]] == Sys.Date()) {
   cases <- data %>% 
     filter(date == Sys.Date()) %>% 
-    summarise(total = sum(n_cases)) %>%
+    summarise(total = sum(n_cases, na.rm = TRUE)) %>%
     .$total
 } else {
   cases <- data %>% 
     filter(date == Sys.Date() - 1) %>% 
-    summarise(total = sum(n_cases)) %>%
+    summarise(total = sum(n_cases, na.rm = TRUE)) %>%
     .$total
 }
 
@@ -81,7 +81,7 @@ valueBox(cases,
 ```{r}
 rate <- data %>% 
   group_by(date) %>% 
-  summarise(total = sum(n_cases))
+  summarise(total = sum(n_cases, na.rm = TRUE))
 
 time_period = 1/(nrow(rate) - 1)
 first_value = first(rate$total)
@@ -100,12 +100,12 @@ valueBox(paste0(cdgr, '%'),
 if(data$date[[nrow(data)]] == Sys.Date()) {
   deaths <- data %>% 
     filter(date == Sys.Date()) %>% 
-    summarise(total = sum(n_deaths)) %>%
+    summarise(total = sum(n_deaths, na.rm = TRUE)) %>%
     .$total
 } else {
   deaths <- data %>% 
     filter(date == Sys.Date() - 1) %>% 
-    summarise(total = sum(n_deaths)) %>%
+    summarise(total = sum(n_deaths, na.rm = TRUE)) %>%
     .$total
 }
 
@@ -117,9 +117,17 @@ valueBox(deaths,
 ### Total recoveries
 
 ```{r}
-recover <- data %>% 
-    summarise(total = sum(n_recoveries)) %>%
+if(data$date[[nrow(data)]] == Sys.Date()) {
+  recover <- data %>% 
+    filter(date == Sys.Date()) %>% 
+    summarise(total = sum(n_recoveries, na.rm = TRUE)) %>%
     .$total
+} else {
+  recover <- data %>% 
+    filter(date == Sys.Date() - 1) %>% 
+    summarise(total = sum(n_recoveries, na.rm = TRUE)) %>%
+    .$total
+}
 
 valueBox(recover, 
          icon = "fa-smile", 
@@ -152,20 +160,38 @@ Row
 
 ```{r}
 # Calculate total cases per date
-foo <- data %>% 
+data_totals <- data %>% 
     group_by(date) %>% 
-    summarise(total = sum(n_cases)) 
+    summarise(total = sum(n_cases, na.rm = TRUE)) 
 
-# Add total cases as a column and pivot provinces to wide format
-data_cases_wide <- data %>% 
-    left_join(foo) %>%
-    complete(date, provinces, fill = list(n_cases = 0, 
+## Fix dates with missing 'unknown' row
+unknown_missing <- data %>% 
+  filter(date < as_date('2020-03-23')) %>% 
+  add_row(date = as_date('2020-03-22'),
+          provinces = 'Unknown',
+          n_tests = NA,
+          n_cases = NA,
+          n_deaths = NA,
+          n_recoveries = NA) %>% 
+  left_join(data_totals) %>% 
+  complete(date, provinces, fill = list(n_cases = 0, 
                                           n_deaths = 0,
                                           n_recoveries = 0)) %>% 
-    fill(n_tests, total, .direction = 'down') %>% 
-    select(date, provinces, n_cases, total) %>% 
+  fill(n_tests, total, .direction = 'down') %>% 
+  select(date, provinces, n_cases, total) %>% 
     pivot_wider(names_from = 'provinces',
                 values_from = 'n_cases') 
+
+## Get dates with 'unknown' row
+unknown_present <- data %>% 
+  filter(date > as_date('2020-03-22')) %>% 
+  left_join(data_totals) %>% 
+  select(date, provinces, n_cases, total) %>% 
+    pivot_wider(names_from = 'provinces',
+                values_from = 'n_cases') 
+
+## Combine the two dataframes
+data_cases_wide <- bind_rows(unknown_missing, unknown_present)
 
 # Plot the data using plotly
 ## (damn I hate plotly's api)
@@ -205,7 +231,7 @@ data_cases_wide %>%
               visible = 'legendonly')
 ```
 
-### Daily count of new cases and recoveries, by province {.no-padding}
+### Daily count of new cases, by province {.no-padding}
 
 ```{r}
 # Read shape file
@@ -252,23 +278,20 @@ za_map <- za_map %>%
     provinces == 'LP' ~ 'Limpopo'
   )) 
 
-bar <- data %>% 
+date_past <- data %>% 
   filter(date != max(date)) %>% 
   filter(date == max(date)) %>% 
   arrange(provinces) %>% 
-  select(provinces, n_cases, n_recoveries) %>% 
-  rename(n_cases24 = n_cases,
-         n_recoveries24 = n_recoveries)
+  select(provinces, n_cases) %>% 
+  rename(n_cases24 = n_cases)
 
 za_map <- za_map %>% 
   arrange(provinces) %>% 
-  left_join(bar) %>% 
-  mutate(delta_cases = n_cases - n_cases24,
-         delta_recoveries = n_recoveries - n_recoveries24) %>% 
+  left_join(date_past) %>% 
+  mutate(delta_cases = n_cases - n_cases24) %>% 
   # Add a tooltip
   mutate(tooltip = paste0('<b>', province_names, '</b><br>',
-                          '<em>New cases: </em>', delta_cases, '<br>',
-                          '<em>Recoveries: </em>', delta_recoveries, '<br>'))
+                          '<em>New cases: </em>', delta_cases, '<br>'))
 
 # Generate plot object
 gg_province <- ggplot(data = za_map) +
@@ -276,8 +299,8 @@ gg_province <- ggplot(data = za_map) +
                             fill = delta_cases), 
              color = '#000000',
              size = 0.25) +
-    labs(subtitle = str_glue('Date: {data$date[[nrow(data)]]}'),
-         caption = '* Move cursor over each province to see province-specific data') +
+    labs(title = str_glue('Date: {data$date[[nrow(data)]]}'),
+         subtitle = 'Move cursor over each province to see province-specific data\nGrey fill indicates no data available') +
     scale_fill_distiller(name = 'New cases', 
                          direction = 1) +
     theme_void() +
@@ -474,9 +497,9 @@ plot_ly(data = data_jhu2,
 data_daily <- data %>% 
   select(date, n_cases, n_deaths, n_recoveries) %>% 
   group_by(date) %>% 
-  summarise(n_cases = sum(n_cases),
-            n_deaths = sum(n_deaths),
-            n_recoveries = sum(n_recoveries)) %>% 
+  summarise(n_cases = sum(n_cases, na.rm = TRUE),
+            n_deaths = sum(n_deaths, na.rm = TRUE),
+            n_recoveries = sum(n_recoveries, na.rm = TRUE)) %>% 
   ungroup()
 
 # Top slice the first row of data
