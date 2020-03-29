@@ -49,10 +49,10 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE)
 ```
 
-Row {data-height=150}
+Row {data-height=180}
 ----------
 
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), iii) the cumulative number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel), and the total number of new cases per day for the country as a whole (bottom right panel).<br><br>**Note:** These data in no way reflect the prevalence of the disease. Moreover, because testing densities and strategies differ between locales, direct comparisons between countries is fraught. . 
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), iii) the cumulative number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel), and the total number of new cases per day for the country as a whole (bottom right panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales, making direct comparisons between countries is fraught. 
 
 Row
 ----------
@@ -601,4 +601,12 @@ perc_tests %>%
                         nticks = nrow(perc_tests)),
            yaxis = list(title = 'Percent positive tests (%)',
                         titlefont = list(size = 20))) 
+```
+
+```{r doubling, eval = FALSE}
+
+
+
+
+
 ```
