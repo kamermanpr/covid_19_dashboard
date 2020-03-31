@@ -43,6 +43,8 @@ data_jhu <- read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/
 ### (No longer needed, JHU updated records)
 #data_us <- read_csv('https://raw.githubusercontent.com/kamermanpr/covid_19_dashboard/master/data/us-2020-01-21-to-2020-03-09.csv')
 
+recover_jhu <- read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv')
+
 # knitr options
 knitr::opts_chunk$set(echo = FALSE,
                       warning = FALSE,
@@ -52,7 +54,7 @@ knitr::opts_chunk$set(echo = FALSE,
 Row {data-height=180}
 ----------
 
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), iii) the cumulative number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel), and the total number of new cases per day for the country as a whole (bottom right panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales, making direct comparisons between countries is fraught. 
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), iii) the cumulative number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel), and the total number of new cases per day for the country as a whole (bottom right panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales (and within locales over time), making direct comparisons between countries is fraught. 
 
 Row
 ----------
@@ -117,17 +119,11 @@ valueBox(deaths,
 ### Total recoveries
 
 ```{r}
-if(data$date[[nrow(data)]] == Sys.Date()) {
-  recover <- data %>% 
-    filter(date == Sys.Date()) %>% 
-    summarise(total = sum(n_recoveries, na.rm = TRUE)) %>%
-    .$total
-} else {
-  recover <- data %>% 
-    filter(date == Sys.Date() - 1) %>% 
-    summarise(total = sum(n_recoveries, na.rm = TRUE)) %>%
-    .$total
-}
+recover <- recover_jhu %>%
+  filter(`Country/Region` == 'South Africa') %>% 
+  select(-c(1:4)) %>% 
+  select(ncol(.)) %>% 
+  .[[1]]
 
 valueBox(recover, 
          icon = "fa-smile", 
@@ -493,33 +489,43 @@ plot_ly(data = data_jhu2,
 ### Daily count of new cases and recoveries, for the country
 
 ```{r}
-# Calculate cumulative totals
+# Calculate cumulative cases
 data_daily <- data %>% 
-  select(date, n_cases, n_deaths, n_recoveries) %>% 
+  select(date, n_cases) %>% 
   group_by(date) %>% 
-  summarise(n_cases = sum(n_cases, na.rm = TRUE),
-            n_deaths = sum(n_deaths, na.rm = TRUE),
-            n_recoveries = sum(n_recoveries, na.rm = TRUE)) %>% 
+  summarise(n_cases = sum(n_cases, na.rm = TRUE)) %>% 
   ungroup()
 
-# Top slice the first row of data
+# Top slice the first row of the cumulative cases data
 top_slice <- data_daily %>% 
   filter(date == '2020-3-12') 
 
-# Calculate daily totals 
+# Calculate daily new cases totals 
 data_daily <- data_daily %>% 
-  mutate(n_cases = n_cases - lag(n_cases),
-         n_deaths = n_deaths - lag(n_deaths),
-         n_recoveries = n_recoveries - lag(n_recoveries)) %>% 
+  mutate(n_cases = n_cases - lag(n_cases)) %>% 
   filter(date != '2020-03-12') %>% 
   # Add back the top sliced data
   bind_rows(top_slice) %>% 
   arrange(date) %>% 
-  mutate(date = as.Date(date)) %>% 
-  # Remove negative n_recoveries values
-  mutate(n_recoveries = ifelse(n_recoveries < 0,
+  mutate(date = as.Date(date))
+
+# Process recover_jhu data
+recover_jhu <- recover_jhu %>% 
+  filter(`Country/Region` == 'South Africa') %>% 
+  select(-c(1:4)) %>% 
+  pivot_longer(cols = everything(),
+               names_to = 'date',
+               values_to = 'n_recoveries') %>% 
+  mutate(date = mdy(date)) %>% 
+  filter(date >= as.Date('2020-03-12')) %>% 
+  mutate(n_recoveries = n_recoveries - lag(n_recoveries)) %>% 
+  mutate(n_recoveries = ifelse(is.na(n_recoveries), 
                                yes = 0,
-                               no = n_recoveries)) 
+                               no = n_recoveries))
+
+data_daily <- data_daily %>% 
+  left_join(recover_jhu)
+
 # Plot
 plot_ly(data = data_daily,
        x = ~date,
