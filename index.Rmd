@@ -313,7 +313,7 @@ girafe(ggobj = gg_province,
 Row
 ----------
 
-### Cases per 100,000 population
+### Cases per 100,000 population (days since cases > 1 per 100,000)
 
 ```{r}
 # Select and filter data
@@ -321,9 +321,64 @@ data_jhu <- data_jhu %>%
   rename(country = `Country/Region`) %>% 
   select(-Lat, -Long) %>% 
   filter(country %in% c('China', 'US', 'Brazil', 'France', 
+                        'Netherlands', 'Australia', 'New Zealand',
                         'United Kingdom', 'Italy', 'South Africa'))
 
 # Process data
+## The Netherlands
+jhu_netherlands <- data_jhu %>% 
+  filter(country == 'Netherlands' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu)-1),
+               names_to = 'date',
+               values_to = 'ned_count') %>% 
+  mutate(cum_sum = cumsum(ned_count)) %>% 
+  filter(cum_sum > 0) %>% 
+  select(-cum_sum) %>% 
+  mutate(ned_count.100k = (ned_count / 17125596) * 100000) %>% 
+  filter(ned_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>%
+  select(date, days, ned_count, ned_count.100k) %>% 
+  mutate(ned_count.100k = round(ned_count.100k, 4)) %>% 
+  select(-date)
+
+## Australia
+jhu_australia <- data_jhu %>% 
+  filter(country == 'Australia') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'Australia') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu)-1),
+               names_to = 'date',
+               values_to = 'australia_count') %>% 
+  mutate(cum_sum = cumsum(australia_count)) %>% 
+  filter(cum_sum > 0) %>% 
+  select(-cum_sum) %>% 
+  mutate(australia_count.100k = (australia_count / 25499884) * 100000) %>% 
+  filter(australia_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>%
+  select(date, days, australia_count, australia_count.100k) %>% 
+  mutate(australia_count.100k = round(australia_count.100k, 4)) %>% 
+  select(-date)
+
+## New Zealand
+jhu_nz <- data_jhu %>% 
+  filter(country == 'New Zealand' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu)-1),
+               names_to = 'date',
+               values_to = 'nz_count') %>% 
+  mutate(cum_sum = cumsum(nz_count)) %>% 
+  filter(cum_sum > 0) %>% 
+  select(-cum_sum) %>% 
+  mutate(nz_count.100k = (nz_count / 4822233) * 100000) %>% 
+  filter(nz_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>%
+  select(date, days, nz_count, nz_count.100k) %>% 
+  mutate(nz_count.100k = round(nz_count.100k, 4)) %>% 
+  select(-date)
+
 ## China
 jhu_china <- data_jhu %>% 
   filter(country == 'China') %>% 
@@ -337,8 +392,9 @@ jhu_china <- data_jhu %>%
   mutate(cum_sum = cumsum(china_count)) %>% 
   filter(cum_sum > 0) %>% 
   select(-cum_sum) %>% 
-  mutate(days = row_number()) %>%
   mutate(china_count.100k = (china_count / 1439323766) * 100000) %>% 
+  filter(china_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>%
   select(date, days, china_count, china_count.100k) %>% 
   mutate(china_count.100k = round(china_count.100k, 4)) %>% 
   select(-date)
@@ -356,8 +412,9 @@ jhu_us <- data_jhu %>%
   mutate(cum_sum = cumsum(us_count)) %>% 
   filter(cum_sum > 0) %>% 
   select(-cum_sum) %>% 
-  mutate(days = row_number()) %>% 
   mutate(us_count.100k = (us_count / 331002651) * 100000) %>% 
+  filter(us_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>% 
   select(date, days, us_count, us_count.100k) %>% 
   mutate(us_count.100k = round(us_count.100k, 4)) %>% 
   select(-date)
@@ -372,8 +429,9 @@ jhu_brazil <- data_jhu %>%
   mutate(cum_sum = cumsum(brazil_count)) %>% 
   filter(cum_sum > 0) %>% 
   select(-cum_sum) %>% 
-  mutate(days = row_number()) %>% 
   mutate(brazil_count.100k = (brazil_count / 212559417) * 100000) %>% 
+  filter(brazil_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>% 
   select(date, days, brazil_count, brazil_count.100k) %>% 
   mutate(brazil_count.100k = round(brazil_count.100k, 4)) %>% 
   select(-date)
@@ -388,8 +446,9 @@ jhu_france <- data_jhu %>%
   mutate(cum_sum = cumsum(france_count)) %>% 
   filter(cum_sum > 0) %>% 
   select(-cum_sum) %>% 
-  mutate(days = row_number()) %>% 
   mutate(france_count.100k = (france_count / 65273511) * 100000) %>% 
+  filter(france_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>% 
   select(date, days, france_count, france_count.100k) %>% 
   mutate(france_count.100k = round(france_count.100k, 4)) %>% 
   select(-date)
@@ -405,8 +464,9 @@ jhu_uk <- data_jhu %>%
   mutate(cum_sum = cumsum(uk_count)) %>% 
   filter(cum_sum > 0) %>% 
   select(-cum_sum) %>%  
-  mutate(days = row_number()) %>% 
   mutate(uk_count.100k = (uk_count / 67886011) * 100000) %>% 
+  filter(uk_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>% 
   select(date, days, uk_count, uk_count.100k) %>% 
   mutate(uk_count.100k = round(uk_count.100k, 4)) %>% 
   select(-date)
@@ -421,8 +481,9 @@ jhu_italy <- data_jhu %>%
   mutate(cum_sum = cumsum(italy_count)) %>% 
   filter(cum_sum > 0) %>% 
   select(-cum_sum) %>%  
-  mutate(days = row_number()) %>% 
   mutate(italy_count.100k = (italy_count / 60461826) * 100000) %>% 
+  filter(italy_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>% 
   select(date, days, italy_count, italy_count.100k) %>% 
   mutate(italy_count.100k = round(italy_count.100k, 4)) %>% 
   select(-date)
@@ -437,19 +498,22 @@ jhu_za <- data_jhu %>%
   mutate(cum_sum = cumsum(za_count)) %>% 
   filter(cum_sum > 0) %>% 
   select(-cum_sum) %>% 
-  mutate(days = row_number()) %>% 
   mutate(za_count.100k = (za_count / 59308690) * 100000) %>% 
+  filter(za_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>% 
   select(date, days, za_count, za_count.100k) %>% 
   mutate(za_count.100k = round(za_count.100k, 4)) %>% 
   select(-date)
 
 # Bind columns
-data_jhu2 <- jhu_china %>% 
+data_jhu2 <- jhu_italy %>% 
   left_join(jhu_us) %>% 
   left_join(jhu_brazil) %>% 
   left_join(jhu_france) %>% 
-  left_join(jhu_italy) %>% 
+  left_join(jhu_nz) %>% 
   left_join(jhu_uk) %>% 
+  left_join(jhu_australia) %>% 
+  left_join(jhu_netherlands) %>% 
   left_join(jhu_za) 
 
 # Plot
@@ -458,19 +522,26 @@ plot_ly(data = data_jhu2,
         y = ~za_count.100k,
         name = 'South Africa',
         type = 'scatter',
-        marker = list(size = 10),
+        marker = list(size = 0),
         mode = 'lines+markers',
         hovertemplate = paste("<b>Days since first case(s): </b>%{x}<br><b>Cases/100,000 pop: <b>%{y}")) %>% 
     layout(font = list(family = 'Arial'),
-           xaxis = list(title = 'Days since first reported cases',
+           xaxis = list(title = 'Days since cases > 1 per 100,000',
                         titlefont = list(size = 20)),
-           yaxis = list(title = 'Cumulative cases per 100,000 people',
+           yaxis = list(type = 'log',
+                        title = 'Cumulative cases/100,000 people (log10)',
                         titlefont = list(size = 20))) %>% 
   add_trace(y = ~brazil_count.100k,
             name = 'Brazil',
             visible = 'legendonly') %>% 
-  add_trace(y = ~china_count.100k,
-            name = 'China',
+  add_trace(y = ~nz_count.100k,
+            name = 'New Zealand',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~australia_count.100k,
+            name = 'Australia',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~ned_count.100k,
+            name = 'Netherlands',
             visible = 'legendonly') %>% 
   add_trace(y = ~france_count.100k,
             name = 'France',
