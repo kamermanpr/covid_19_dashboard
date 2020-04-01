@@ -665,9 +665,9 @@ plot_ly(data = double,
 
 ```
 
+```{r positive, eval = FALSE}
 ### Percentage of daily tests that are positive for SARS-CoV-2
 
-```{r positive}
 # Get cumulative case # and test # data for each date
 tests <- data %>% 
   select(date, n_tests) %>% 
@@ -707,6 +707,62 @@ plot_ly(data = cases_tests,
            yaxis = list(title = 'Daily tests that are positive (%)',
                         titlefont = list(size = 20)))
 ```
+
+### Daily number of tests (with overlay of daily number of cases)
+
+```{r n_tests}
+# Get cumulative case # and test # data for each date
+tests <- data %>% 
+  select(date, n_tests) %>% 
+  distinct() %>% 
+  mutate(tests_difference = n_tests - lag(n_tests)) %>% 
+  mutate(tests_difference = ifelse(tests_difference == 0,
+                                   yes = NA,
+                                   no = tests_difference))
+
+cases <- data %>% 
+  group_by(date) %>% 
+  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(cases_difference = total - lag(total))
+  
+
+# Join the two dataframes
+cases_tests <- left_join(tests, cases) %>% 
+  select(-n_tests, -total)
+
+# Plot
+plot_ly(data = cases_tests) %>% 
+  add_trace(x = ~date,
+            y = ~tests_difference,
+            type = 'bar',
+            name = 'Tests',
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Tests: <b>%{y}")) %>% 
+  add_trace(x = ~date,
+            y = ~cases_difference,
+            type = 'scatter',
+            mode = 'lines+markers',
+            yaxis = 'y2',
+            marker = list(size = 10),
+            name = 'Cases', 
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
+  layout(font = list(family = 'Arial'),
+         xaxis = list(title = 'Date',
+                      titlefont = list(size = 20)),
+         yaxis = list(side = 'left',
+                      title = 'Daily tests',
+                      titlefont = list(size = 20),
+                      showgrid = FALSE,
+                      zeroline = FALSE),
+         yaxis2 = list(side = 'right',
+                       title = 'Daily cases',
+                       titlefont = list(size = 20),
+                       overlaying = 'y',
+                       showgrid = FALSE,
+                       zeroline = FALSE))
+```
+
+
 
 ```{r eval = FALSE}
 # Row 
