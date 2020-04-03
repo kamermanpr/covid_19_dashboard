@@ -320,7 +320,7 @@ Row
 data_jhu <- data_jhu %>% 
   rename(country = `Country/Region`) %>% 
   select(-Lat, -Long) %>% 
-  filter(country %in% c('China', 'US', 'Brazil', 'France', 
+  filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden',
                         'Netherlands', 'Australia', 'New Zealand',
                         'United Kingdom', 'Italy', 'South Africa'))
 
@@ -436,6 +436,7 @@ jhu_brazil <- data_jhu %>%
   mutate(brazil_count.100k = round(brazil_count.100k, 4)) %>% 
   select(-date)
 
+## France
 jhu_france <- data_jhu %>% 
   filter(country == 'France') %>% 
   filter(is.na(`Province/State`)) %>% 
@@ -505,6 +506,23 @@ jhu_za <- data_jhu %>%
   mutate(za_count.100k = round(za_count.100k, 4)) %>% 
   select(-date)
 
+## South Africa
+jhu_sweden <- data_jhu %>% 
+  filter(country == 'Sweden') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu)-1),
+               names_to = 'date',
+               values_to = 'sweden_count') %>% 
+  mutate(cum_sum = cumsum(sweden_count)) %>% 
+  filter(cum_sum > 0) %>% 
+  select(-cum_sum) %>% 
+  mutate(sweden_count.100k = (sweden_count / 10099265) * 100000) %>% 
+  filter(sweden_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>% 
+  select(date, days, sweden_count, sweden_count.100k) %>% 
+  mutate(sweden_count.100k = round(sweden_count.100k, 4)) %>% 
+  select(-date)
+
 # Bind columns
 data_jhu2 <- jhu_italy %>% 
   left_join(jhu_us) %>% 
@@ -514,7 +532,8 @@ data_jhu2 <- jhu_italy %>%
   left_join(jhu_uk) %>% 
   left_join(jhu_australia) %>% 
   left_join(jhu_netherlands) %>% 
-  left_join(jhu_za) 
+  left_join(jhu_za) %>% 
+  left_join(jhu_sweden)
 
 # Plot
 plot_ly(data = data_jhu2,
@@ -531,17 +550,11 @@ plot_ly(data = data_jhu2,
            yaxis = list(type = 'log',
                         title = 'Cumulative cases/100,000 people (log10)',
                         titlefont = list(size = 20))) %>% 
-  add_trace(y = ~brazil_count.100k,
-            name = 'Brazil',
-            visible = 'legendonly') %>% 
-  add_trace(y = ~nz_count.100k,
-            name = 'New Zealand',
-            visible = 'legendonly') %>% 
   add_trace(y = ~australia_count.100k,
             name = 'Australia',
             visible = 'legendonly') %>% 
-  add_trace(y = ~ned_count.100k,
-            name = 'Netherlands',
+  add_trace(y = ~brazil_count.100k,
+            name = 'Brazil',
             visible = 'legendonly') %>% 
   add_trace(y = ~france_count.100k,
             name = 'France',
@@ -549,6 +562,15 @@ plot_ly(data = data_jhu2,
   add_trace(y = ~italy_count.100k,
             name = 'Italy',
             visible = 'legendonly') %>% 
+  add_trace(y = ~ned_count.100k,
+            name = 'Netherlands',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~nz_count.100k,
+            name = 'New Zealand',
+            visible = 'legendonly') %>%
+  add_trace(y = ~sweden_count.100k,
+            name = 'Sweden',
+            visible = 'legendonly') %>%
   add_trace(y = ~uk_count.100k,
             name = 'UK',
             visible = 'legendonly') %>% 
