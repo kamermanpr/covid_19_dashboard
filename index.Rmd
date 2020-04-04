@@ -320,8 +320,8 @@ Row
 data_jhu <- data_jhu %>% 
   rename(country = `Country/Region`) %>% 
   select(-Lat, -Long) %>% 
-  filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden',
-                        'Netherlands', 'Australia', 'New Zealand',
+  filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden', 'Denmark',
+                        'Netherlands', 'Australia', 'New Zealand', 
                         'United Kingdom', 'Italy', 'South Africa'))
 
 # Process data
@@ -506,7 +506,7 @@ jhu_za <- data_jhu %>%
   mutate(za_count.100k = round(za_count.100k, 4)) %>% 
   select(-date)
 
-## South Africa
+## Sweden
 jhu_sweden <- data_jhu %>% 
   filter(country == 'Sweden') %>% 
   select(-`Province/State`)  %>% 
@@ -523,10 +523,28 @@ jhu_sweden <- data_jhu %>%
   mutate(sweden_count.100k = round(sweden_count.100k, 4)) %>% 
   select(-date)
 
+## Denmark
+jhu_denmark <- data_jhu %>% 
+  filter(country == 'Denmark' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu)-1),
+               names_to = 'date',
+               values_to = 'denmark_count') %>% 
+  mutate(cum_sum = cumsum(denmark_count)) %>% 
+  filter(cum_sum > 0) %>% 
+  select(-cum_sum) %>% 
+  mutate(denmark_count.100k = (denmark_count / 5787330) * 100000) %>% 
+  filter(denmark_count.100k >= 1) %>% 
+  mutate(days = row_number()) %>% 
+  select(date, days, denmark_count, denmark_count.100k) %>% 
+  mutate(denmark_count.100k = round(denmark_count.100k, 4)) %>% 
+  select(-date)
+
 # Bind columns
 data_jhu2 <- jhu_italy %>% 
   left_join(jhu_us) %>% 
   left_join(jhu_brazil) %>% 
+  left_join(jhu_denmark) %>% 
   left_join(jhu_france) %>% 
   left_join(jhu_nz) %>% 
   left_join(jhu_uk) %>% 
@@ -555,6 +573,9 @@ plot_ly(data = data_jhu2,
             visible = 'legendonly') %>% 
   add_trace(y = ~brazil_count.100k,
             name = 'Brazil',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~denmark_count.100k,
+            name = 'Denmark',
             visible = 'legendonly') %>% 
   add_trace(y = ~france_count.100k,
             name = 'France',
