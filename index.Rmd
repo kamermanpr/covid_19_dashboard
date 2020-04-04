@@ -543,7 +543,7 @@ plot_ly(data = data_jhu2,
         type = 'scatter',
         marker = list(size = 0),
         mode = 'lines+markers',
-        hovertemplate = paste("<b>Days since first case(s): </b>%{x}<br><b>Cases/100,000 pop: <b>%{y}")) %>% 
+        hovertemplate = paste("<b>Days: </b>%{x}<br><b>Cases/100,000 pop: <b>%{y}")) %>% 
     layout(font = list(family = 'Arial'),
            xaxis = list(title = 'Days since cases > 1 per 100,000',
                         titlefont = list(size = 20)),
