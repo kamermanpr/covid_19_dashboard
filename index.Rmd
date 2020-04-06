@@ -56,7 +56,7 @@ knitr::opts_chunk$set(echo = FALSE,
 Row {data-height=200}
 ----------
 
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: **i)** the cumulative number of cases in the South Africa and each of its provinces (Plot 1: top left panel); **ii)** the number of new cases per day in South Africa, by province (Plot 2: top right panel); **iii)** the cumulative number of cases in South Africa and some other countries, (Plot 3: middle left panel); **iv)** the cumulative number of deaths in South Africa and some other countries (Plot 4: middle right panel); **v)** daily number of tests, with daily number of cases overlayed (Plot 5: bottom left panel); and **vi)** Doubling time (cases) each week (Plot 6: bottom right panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales (and within locales over time), making direct comparisons between countries is fraught. 
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: **i)** the cumulative number of cases in the South Africa and each of its provinces (Plot 1: top left panel); **ii)** the number of new cases per day in South Africa, by province (Plot 2: top right panel); **iii)** the cumulative number of cases in South Africa and some other countries, (Plot 3: middle left panel); **iv)** the cumulative number of deaths in South Africa and some other countries (Plot 4: middle right panel); **v)** daily number of tests, with daily number of cases overlayed (Plot 5: bottom left panel); and **vi)** Doubling time (cases) each week (Plot 6: bottom right panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales (and even within locales over time), making direct comparisons between countries is fraught. 
 
 Row
 ----------
@@ -323,7 +323,7 @@ data_jhu2 <- data_jhu %>%
   rename(country = `Country/Region`) %>% 
   select(-Lat, -Long) %>% 
   filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden', 'Denmark',
-                        'Netherlands', 'Australia', 'New Zealand', 
+                        'Netherlands', 'Australia', 'New Zealand', 'Canada',
                         'United Kingdom', 'Italy', 'South Africa'))
 
 # Process data
@@ -351,6 +351,20 @@ jhu_aus2 <- data_jhu2 %>%
   filter(australia_count > 95) %>% 
   mutate(days = row_number()) %>%
   select(days, australia_count)
+
+## Canada
+jhu_canada2 <- data_jhu2 %>% 
+  filter(country == 'Canada') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'Canada') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'canada_count') %>% 
+  filter(canada_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, canada_count)
 
 ## New Zealand
 jhu_nz2 <- data_jhu2 %>% 
@@ -482,7 +496,8 @@ data_jhu3 <- jhu_china2 %>%
   left_join(jhu_aus2) %>% 
   left_join(jhu_ned2) %>% 
   left_join(jhu_za2) %>% 
-  left_join(jhu_sweden2)
+  left_join(jhu_sweden2) %>% 
+  left_join(jhu_canada2)
 
 # Plot
 plot_ly(data = data_jhu3,
@@ -504,6 +519,9 @@ plot_ly(data = data_jhu3,
             visible = 'legendonly') %>% 
   add_trace(y = ~brazil_count,
             name = 'Brazil',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~canada_count,
+            name = 'Canada',
             visible = 'legendonly') %>% 
   add_trace(y = ~denmark_count,
             name = 'Denmark',
@@ -538,7 +556,7 @@ deaths_jhu <- deaths_jhu %>%
   rename(country = `Country/Region`) %>% 
   select(-Lat, -Long) %>% 
   filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden', 'Denmark',
-                        'Netherlands', 'Australia', 'New Zealand', 
+                        'Netherlands', 'Australia', 'New Zealand', 'Canada',
                         'United Kingdom', 'Italy', 'South Africa'))
 
 # Process data
@@ -588,6 +606,32 @@ aus <- left_join(deaths_aus, cases_aus) %>%
   mutate(days = row_number()) %>% 
   select(days, aus_deaths)
 
+## Canada
+deaths_can <- deaths_jhu %>% 
+  filter(country == 'Canada') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'Canada') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu) - 1),
+               names_to = 'date',
+               values_to = 'can_deaths') 
+
+cases_can <- data_jhu2 %>% 
+  filter(country == 'Canada') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'Canada') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2) - 1),
+               names_to = 'date',
+               values_to = 'can_cases') 
+
+can <- left_join(deaths_can, cases_can) %>% 
+  filter(can_cases > 95) %>% 
+  mutate(days = row_number()) %>% 
+  select(days, can_deaths)
+
 ## New Zealand
 deaths_nz <- deaths_jhu %>% 
   filter(country == 'New Zealand' & is.na(`Province/State`)) %>% 
@@ -608,7 +652,6 @@ nz <- left_join(deaths_nz, cases_nz) %>%
   mutate(days = row_number()) %>% 
   select(days, nz_deaths)
   
-
 ## China
 deaths_china <- deaths_jhu %>% 
   filter(country == 'China') %>% 
@@ -807,7 +850,8 @@ deaths_jhu2 <- china %>%
   left_join(aus) %>% 
   left_join(ned) %>% 
   left_join(za) %>% 
-  left_join(sw)
+  left_join(sw) %>% 
+  left_join(can)
 
 # Plot
 plot_ly(data = deaths_jhu2,
@@ -829,6 +873,9 @@ plot_ly(data = deaths_jhu2,
             visible = 'legendonly') %>% 
   add_trace(y = ~bz_deaths,
             name = 'Brazil',
+            visible = 'legendonly') %>%
+  add_trace(y = ~can_deaths,
+            name = 'Canada',
             visible = 'legendonly') %>% 
   add_trace(y = ~dm_deaths,
             name = 'Denmark',
