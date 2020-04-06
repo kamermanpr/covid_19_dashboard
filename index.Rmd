@@ -45,16 +45,18 @@ data_jhu <- read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/
 
 recover_jhu <- read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv')
 
+deaths_jhu <- read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv')
+
 # knitr options
 knitr::opts_chunk$set(echo = FALSE,
                       warning = FALSE,
                       message = FALSE)
 ```
 
-Row {data-height=180}
+Row {data-height=200}
 ----------
 
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: i) the cumulative number of cases in the South Africa and each of its provinces (top left panel), ii) the number of new cases per day in South Africa, by province (top right panel), iii) the cumulative number of cases per 100 000 population in South Africa and 6 other countries (bottom left panel), and the total number of new cases per day for the country as a whole (bottom right panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales (and within locales over time), making direct comparisons between countries is fraught. 
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: **i)** the cumulative number of cases in the South Africa and each of its provinces (Plot 1: top left panel); **ii)** the number of new cases per day in South Africa, by province (Plot 2: top right panel); **iii)** the cumulative number of cases in South Africa and some other countries, (Plot 3: middle left panel); **iv)** the cumulative number of deaths in South Africa and some other countries (Plot 4: middle right panel); **v)** daily number of tests, with daily number of cases overlayed (Plot 5: bottom left panel); and **vi)** Doubling time (cases) each week (Plot 6: bottom right panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales (and within locales over time), making direct comparisons between countries is fraught. 
 
 Row
 ----------
@@ -152,7 +154,7 @@ valueBox(tests,
 Row
 ----------
 
-### Cumulative number of cases over time
+### Plot 1: Cumulative number of cases over time
 
 ```{r}
 # Calculate total cases per date
@@ -227,7 +229,7 @@ data_cases_wide %>%
               visible = 'legendonly')
 ```
 
-### Daily count of new cases, by province {.no-padding}
+### Plot 2: Daily count of new cases, by province {.no-padding}
 
 ```{r}
 # Read shape file
@@ -313,9 +315,552 @@ girafe(ggobj = gg_province,
 Row
 ----------
 
-### Cases per 100,000 population (days since cases > 1 per 100,000)
+### Plot 3: Cumulative cases (days since 100th case)
 
 ```{r}
+# Select and filter data
+data_jhu2 <- data_jhu %>% 
+  rename(country = `Country/Region`) %>% 
+  select(-Lat, -Long) %>% 
+  filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden', 'Denmark',
+                        'Netherlands', 'Australia', 'New Zealand', 
+                        'United Kingdom', 'Italy', 'South Africa'))
+
+# Process data
+## The Netherlands
+jhu_ned2 <- data_jhu2 %>% 
+  filter(country == 'Netherlands' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'ned_count') %>% 
+  filter(ned_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, ned_count)
+
+## Australia
+jhu_aus2 <- data_jhu2 %>% 
+  filter(country == 'Australia') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'Australia') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'australia_count') %>% 
+  filter(australia_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, australia_count)
+
+## New Zealand
+jhu_nz2 <- data_jhu2 %>% 
+  filter(country == 'New Zealand' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'nz_count') %>% 
+  filter(nz_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, nz_count)
+
+## China
+jhu_china2 <- data_jhu2 %>% 
+  filter(country == 'China') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'China') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'china_count') %>% 
+  filter(china_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, china_count)
+
+## USA
+jhu_us2 <- data_jhu2 %>% 
+  filter(country == 'US') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'US') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'us_count') %>%
+  filter(us_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, us_count)
+
+## Brazil
+jhu_brazil2 <- data_jhu2 %>% 
+  filter(country == 'Brazil') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'brazil_count') %>% 
+  filter(brazil_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, brazil_count)
+
+## France
+jhu_france2 <- data_jhu2 %>% 
+  filter(country == 'France') %>% 
+  filter(is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'france_count') %>% 
+  filter(france_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, france_count)
+
+## United Kingdom
+jhu_uk2 <- data_jhu2 %>% 
+  filter(country == 'United Kingdom') %>% 
+  filter(is.na(`Province/State`)) %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'uk_count') %>% 
+  filter(uk_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, uk_count)
+
+## Italy
+jhu_italy2 <- data_jhu2 %>% 
+  filter(country == 'Italy') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'italy_count') %>% 
+  filter(italy_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, italy_count)
+
+## South Africa
+jhu_za2 <- data_jhu2 %>% 
+  filter(country == 'South Africa') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'za_count') %>% 
+  filter(za_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, za_count)
+
+## Sweden
+jhu_sweden2 <- data_jhu2 %>% 
+  filter(country == 'Sweden') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'sweden_count') %>% 
+  filter(sweden_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, sweden_count)
+
+## Denmark
+jhu_denmark2 <- data_jhu2 %>% 
+  filter(country == 'Denmark' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'denmark_count') %>% 
+  filter(denmark_count > 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, denmark_count)
+
+# Bind columns
+data_jhu3 <- jhu_china2 %>% 
+  left_join(jhu_italy2) %>% 
+  left_join(jhu_us2) %>% 
+  left_join(jhu_brazil2) %>% 
+  left_join(jhu_denmark2) %>% 
+  left_join(jhu_france2) %>% 
+  left_join(jhu_nz2) %>% 
+  left_join(jhu_uk2) %>% 
+  left_join(jhu_aus2) %>% 
+  left_join(jhu_ned2) %>% 
+  left_join(jhu_za2) %>% 
+  left_join(jhu_sweden2)
+
+# Plot
+plot_ly(data = data_jhu3,
+        x = ~days,
+        y = ~za_count,
+        name = 'South Africa',
+        type = 'scatter',
+        marker = list(size = 0),
+        mode = 'lines+markers',
+        hovertemplate = paste("<b>Days since 100th case: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
+    layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Days since 100th case',
+                        titlefont = list(size = 20)),
+           yaxis = list(type = 'log',
+                        title = 'Cumulative cases (log10)',
+                        titlefont = list(size = 20))) %>% 
+  add_trace(y = ~australia_count,
+            name = 'Australia',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~brazil_count,
+            name = 'Brazil',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~denmark_count,
+            name = 'Denmark',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~france_count,
+            name = 'France',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~italy_count,
+            name = 'Italy',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~ned_count,
+            name = 'Netherlands',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~nz_count,
+            name = 'New Zealand',
+            visible = 'legendonly') %>%
+  add_trace(y = ~sweden_count,
+            name = 'Sweden',
+            visible = 'legendonly') %>%
+  add_trace(y = ~uk_count,
+            name = 'UK',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~us_count,
+            name = 'USA',
+            visible = 'legendonly')
+```
+
+### Plot 4: Cumulative deaths (days since 10th death)
+
+```{r}
+deaths_jhu <- deaths_jhu %>% 
+  rename(country = `Country/Region`) %>% 
+  select(-Lat, -Long) %>% 
+  filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden', 'Denmark',
+                        'Netherlands', 'Australia', 'New Zealand', 
+                        'United Kingdom', 'Italy', 'South Africa'))
+
+# Process data
+## The Netherlands
+deaths_ned <- deaths_jhu %>% 
+  filter(country == 'Netherlands' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'ned_count') %>% 
+  filter(ned_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## Australia
+deaths_australia <- deaths_jhu %>% 
+  filter(country == 'Australia') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'Australia') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'australia_count') %>% 
+  filter(australia_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## New Zealand
+deaths_nz <- deaths_jhu %>% 
+  filter(country == 'New Zealand' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'nz_count') %>% 
+  filter(nz_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## China
+deaths_china <- deaths_jhu %>% 
+  filter(country == 'China') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'China') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'china_count') %>% 
+  filter(china_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## USA
+deaths_us <- deaths_jhu %>% 
+  filter(country == 'US') %>% 
+  select(-`Province/State`) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(country = 'US') %>% 
+  select(country, everything())  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'us_count')%>% 
+  filter(us_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## Brazil
+deaths_brazil <- deaths_jhu %>% 
+  filter(country == 'Brazil') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'brazil_count') %>% 
+  filter(brazil_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## France
+deaths_france <- deaths_jhu %>% 
+  filter(country == 'France') %>% 
+  filter(is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'france_count') %>% 
+  filter(france_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## United Kingdom
+deaths_uk <- deaths_jhu %>% 
+  filter(country == 'United Kingdom') %>% 
+  filter(is.na(`Province/State`)) %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'uk_count') %>% 
+  filter(uk_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## Italy
+deaths_italy <- deaths_jhu %>% 
+  filter(country == 'Italy') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'italy_count')%>% 
+  filter(italy_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## South Africa
+deaths_za <- deaths_jhu %>% 
+  filter(country == 'South Africa') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'za_count') %>% 
+  filter(za_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## Sweden
+deaths_sweden <- deaths_jhu %>% 
+  filter(country == 'Sweden') %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'sweden_count') %>% 
+  filter(sweden_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+## Denmark
+deaths_denmark <- deaths_jhu %>% 
+  filter(country == 'Denmark' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`)  %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu)-1),
+               names_to = 'date',
+               values_to = 'denmark_count') %>% 
+  filter(denmark_count > 0) %>% 
+  mutate(days = row_number()) %>% 
+  select(-date) %>% 
+  select(-country)
+
+# Bind columns
+deaths_jhu2 <- deaths_china %>% 
+  left_join(deaths_italy) %>% 
+  left_join(deaths_us) %>% 
+  left_join(deaths_brazil) %>% 
+  left_join(deaths_denmark) %>% 
+  left_join(deaths_france) %>% 
+  left_join(deaths_nz) %>% 
+  left_join(deaths_uk) %>% 
+  left_join(deaths_australia) %>% 
+  left_join(deaths_ned) %>% 
+  left_join(deaths_za) %>% 
+  left_join(deaths_sweden)
+
+# Plot
+plot_ly(data = deaths_jhu2,
+        x = ~days,
+        y = ~za_count,
+        name = 'South Africa',
+        type = 'scatter',
+        marker = list(size = 0),
+        mode = 'lines+markers',
+        hovertemplate = paste("<b>Days since 1st death: </b>%{x}<br><b>Deaths: <b>%{y}")) %>% 
+    layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Days since 1st death',
+                        titlefont = list(size = 20)),
+           yaxis = list(type = 'log',
+                        title = 'Cumulative deaths (log10)',
+                        titlefont = list(size = 20))) %>% 
+  add_trace(y = ~australia_count,
+            name = 'Australia',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~brazil_count,
+            name = 'Brazil',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~denmark_count,
+            name = 'Denmark',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~france_count,
+            name = 'France',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~italy_count,
+            name = 'Italy',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~ned_count,
+            name = 'Netherlands',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~nz_count,
+            name = 'New Zealand',
+            visible = 'legendonly') %>%
+  add_trace(y = ~sweden_count,
+            name = 'Sweden',
+            visible = 'legendonly') %>%
+  add_trace(y = ~uk_count,
+            name = 'UK',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~us_count,
+            name = 'USA',
+            visible = 'legendonly')
+```
+
+Row
+----
+
+### Plot 5: Daily number of tests (with overlay of daily number of cases)
+
+```{r}
+# Get cumulative case # and test # data for each date
+tests <- data %>% 
+  select(date, n_tests) %>% 
+  distinct() %>% 
+  mutate(tests_difference = n_tests - lag(n_tests)) %>% 
+  mutate(tests_difference = ifelse(tests_difference == 0,
+                                   yes = NA,
+                                   no = tests_difference))
+
+cases <- data %>% 
+  group_by(date) %>% 
+  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(cases_difference = total - lag(total))
+  
+
+# Join the two dataframes
+cases_tests <- left_join(tests, cases) %>% 
+  select(-n_tests, -total)
+
+# Plot
+plot_ly(data = cases_tests) %>% 
+  add_trace(x = ~date,
+            y = ~tests_difference,
+            type = 'bar',
+            name = 'Tests',
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Tests: <b>%{y}")) %>% 
+  add_trace(x = ~date,
+            y = ~cases_difference,
+            type = 'scatter',
+            mode = 'lines+markers',
+            yaxis = 'y2',
+            marker = list(size = 10),
+            name = 'Cases', 
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
+  layout(font = list(family = 'Arial'),
+         xaxis = list(title = 'Date',
+                      titlefont = list(size = 20)),
+         yaxis = list(side = 'left',
+                      title = 'Daily tests',
+                      titlefont = list(size = 20),
+                      showgrid = FALSE,
+                      zeroline = FALSE),
+         yaxis2 = list(side = 'right',
+                       title = 'Daily cases',
+                       titlefont = list(size = 20),
+                       overlaying = 'y',
+                       showgrid = FALSE,
+                       zeroline = FALSE))
+```
+
+### Plot 6: Doubling time for cases (in days) for each week
+
+```{r}
+double <- data %>% 
+  select(date, n_cases) %>% 
+  group_by(date) %>% 
+  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
+  mutate(week = week(date)) %>% 
+  group_by(week) %>% 
+  nest() %>% 
+  mutate(periods = map(.x = data,
+                      ~ 1 / (nrow(.x) - 1)),
+         first = map(.x = data,
+                     ~ first(.x$total)),
+         last = map(.x = data,
+                    ~ last(.x$total)),
+         compound_growth_rate = pmap(.l = list(periods, first,last),
+                                     ~ (((..3 / ..2)^..1) - 1)),
+         double_time = map(.x = compound_growth_rate,
+                           ~ log(2) / .x)) %>% 
+  unnest(double_time) %>%
+  ungroup() %>% 
+  select(week, double_time) %>% 
+  mutate(week = as.character(dense_rank(week)),
+         double_time = round(double_time, 2))
+
+
+plot_ly(data = double,
+       x = ~week,
+       y = ~double_time,
+       type = 'bar', 
+       name = 'Cases', 
+       hovertemplate = paste("<b>Week: </b>%{x}<br><b>Doubling time (days): <b>%{y}"),
+       marker = list(color = 'rgb(49,130,189)',
+                     size = 10)) %>% 
+  layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Week',
+                        titlefont = list(size = 20)),
+           yaxis = list(title = 'Doubling time (days)',
+                        titlefont = list(size = 20)))
+
+```
+
+```{r, eval = FALSE}
+### Plot 3: Cases per 100,000 population (days since cases > 1/100,000 people)
+
 # Select and filter data
 data_jhu <- data_jhu %>% 
   rename(country = `Country/Region`) %>% 
@@ -600,9 +1145,9 @@ plot_ly(data = data_jhu2,
             visible = 'legendonly')
 ```
 
+```{r eval = FALSE}
 ### Daily count of new cases and recoveries, for the country
 
-```{r}
 # Calculate cumulative cases
 data_daily <- data %>% 
   select(date, n_cases) %>% 
@@ -662,53 +1207,7 @@ plot_ly(data = data_daily,
             visible = 'legendonly')
 ```
 
-Row
------
-
-### Doubling time for cases (in days) for each week
-
-```{r doubling}
-double <- data %>% 
-  select(date, n_cases) %>% 
-  group_by(date) %>% 
-  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
-  mutate(week = week(date)) %>% 
-  group_by(week) %>% 
-  nest() %>% 
-  mutate(periods = map(.x = data,
-                      ~ 1 / (nrow(.x) - 1)),
-         first = map(.x = data,
-                     ~ first(.x$total)),
-         last = map(.x = data,
-                    ~ last(.x$total)),
-         compound_growth_rate = pmap(.l = list(periods, first,last),
-                                     ~ (((..3 / ..2)^..1) - 1)),
-         double_time = map(.x = compound_growth_rate,
-                           ~ log(2) / .x)) %>% 
-  unnest(double_time) %>%
-  ungroup() %>% 
-  select(week, double_time) %>% 
-  mutate(week = as.character(dense_rank(week)),
-         double_time = round(double_time, 2))
-
-
-plot_ly(data = double,
-       x = ~week,
-       y = ~double_time,
-       type = 'bar', 
-       name = 'Cases', 
-       hovertemplate = paste("<b>Week: </b>%{x}<br><b>Doubling time (days): <b>%{y}"),
-       marker = list(color = 'rgb(49,130,189)',
-                     size = 10)) %>% 
-  layout(font = list(family = 'Arial'),
-           xaxis = list(title = 'Week',
-                        titlefont = list(size = 20)),
-           yaxis = list(title = 'Doubling time (days)',
-                        titlefont = list(size = 20)))
-
-```
-
-```{r positive, eval = FALSE}
+```{r eval = FALSE}
 ### Percentage of daily tests that are positive for SARS-CoV-2
 
 # Get cumulative case # and test # data for each date
@@ -749,122 +1248,5 @@ plot_ly(data = cases_tests,
                         titlefont = list(size = 20)),
            yaxis = list(title = 'Daily tests that are positive (%)',
                         titlefont = list(size = 20)))
-```
-
-### Daily number of tests (with overlay of daily number of cases)
-
-```{r n_tests}
-# Get cumulative case # and test # data for each date
-tests <- data %>% 
-  select(date, n_tests) %>% 
-  distinct() %>% 
-  mutate(tests_difference = n_tests - lag(n_tests)) %>% 
-  mutate(tests_difference = ifelse(tests_difference == 0,
-                                   yes = NA,
-                                   no = tests_difference))
-
-cases <- data %>% 
-  group_by(date) %>% 
-  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  mutate(cases_difference = total - lag(total))
-  
-
-# Join the two dataframes
-cases_tests <- left_join(tests, cases) %>% 
-  select(-n_tests, -total)
-
-# Plot
-plot_ly(data = cases_tests) %>% 
-  add_trace(x = ~date,
-            y = ~tests_difference,
-            type = 'bar',
-            name = 'Tests',
-            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Tests: <b>%{y}")) %>% 
-  add_trace(x = ~date,
-            y = ~cases_difference,
-            type = 'scatter',
-            mode = 'lines+markers',
-            yaxis = 'y2',
-            marker = list(size = 10),
-            name = 'Cases', 
-            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
-  layout(font = list(family = 'Arial'),
-         xaxis = list(title = 'Date',
-                      titlefont = list(size = 20)),
-         yaxis = list(side = 'left',
-                      title = 'Daily tests',
-                      titlefont = list(size = 20),
-                      showgrid = FALSE,
-                      zeroline = FALSE),
-         yaxis2 = list(side = 'right',
-                       title = 'Daily cases',
-                       titlefont = list(size = 20),
-                       overlaying = 'y',
-                       showgrid = FALSE,
-                       zeroline = FALSE))
-```
-
-
-
-```{r eval = FALSE}
-# Row 
-# ----------
-# ### Proportion of cases resulting in death
-
-# Process data
-perc_deaths <- data %>% 
-  select(-provinces, -n_tests) %>% 
-  group_by(date) %>% 
-  summarise(total_cases = sum(n_cases),
-            total_deaths = sum(n_deaths),
-            percent = round(100 * (total_deaths/total_cases), 2)) 
-
-# Plot the data using plotly
-perc_deaths %>%     
-    plot_ly(x = ~date, 
-            y = ~percent, 
-            name = 'deaths',
-            type = 'scatter', 
-            mode = 'lines+markers',
-            marker = list(size = 10),
-            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Percent deaths: <b>%{y}%")) %>% 
-    layout(xaxis = list(title = 'Date',
-                        titlefont = list(size = 20), 
-                        tickformat = '%Y-%m-%d',
-                        nticks = nrow(pos_tests)),
-           yaxis = list(title = 'Percent cases resulting in death (%)',
-                        titlefont = list(size = 20),
-                        range = c(0, 5))) 
-```
-
-```{r eval = FALSE}
-# Row 
-# ----------
-# ### Proportion of positive tests
-
-# Process data
-perc_tests <- data %>% 
-  select(-provinces, -n_deaths) %>% 
-  group_by(date, n_tests) %>% 
-  summarise(total_cases = sum(n_cases)) %>% 
-  ungroup() %>% 
-  mutate(percent = round(100 * (total_cases / n_tests), 2))
-
-# Plot the data using plotly
-perc_tests %>%     
-    plot_ly(x = ~date, 
-            y = ~percent, 
-            name = 'tests',
-            type = 'scatter', 
-            mode = 'lines+markers',
-            marker = list(size = 10),
-            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Percent positive: <b>%{y}%")) %>% 
-    layout(xaxis = list(title = 'Date',
-                        titlefont = list(size = 20), 
-                        tickformat = '%Y-%m-%d',
-                        nticks = nrow(perc_tests)),
-           yaxis = list(title = 'Percent positive tests (%)',
-                        titlefont = list(size = 20))) 
 ```
 
