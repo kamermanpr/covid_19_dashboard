@@ -56,7 +56,7 @@ knitr::opts_chunk$set(echo = FALSE,
 Row {data-height=200}
 ----------
 
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: **i)** the cumulative number of cases in the South Africa and each of its provinces (Plot 1: top left panel); **ii)** the number of new cases per day in South Africa, by province (Plot 2: top right panel); **iii)** the cumulative number of cases in South Africa and some other countries, (Plot 3: middle left panel); **iv)** the cumulative number of deaths in South Africa and some other countries (Plot 4: middle right panel); **v)** daily number of tests, with daily number of cases overlaid (Plot 5: bottom left panel); and **vi)** Doubling time (cases) each week (Plot 6: bottom right panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales (and even within locales over time), making direct comparisons between countries is fraught. 
+Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: **i)** the cumulative number of cases in the South Africa and each of its provinces (Plot 1: top left panel); **ii)** the number of new cases per day in South Africa, by province (Plot 2: top right panel); **iii)** the cumulative number of cases in South Africa and some other countries, (Plot 3: 2nd row left panel); **iv)** the cumulative number of deaths in South Africa and some other countries (Plot 4: 2nd row right panel); **v)** daily number of tests, with daily number of cases overlaid (Plot 5: 3rd row left panel); and **vi)** Percentage of daily tests that are positive (Plot 6: 3rd row right panel); **vii)** Doubling time (cases) each week (Plot 7: 4th row left panel).<br><br>**Note:** Selection bias means that these data in no way reflect the prevalence of the disease. Moreover, because testing capacities and testing strategies differ between locales (and even within locales over time), making direct comparisons between countries is fraught. 
 
 Row
 ----------
@@ -960,7 +960,53 @@ plot_ly(data = cases_tests) %>%
                        zeroline = FALSE))
 ```
 
-### Plot 6: Doubling time for cases (in days) for each week
+### Plot 6: Percentage of daily tests that are positive
+
+```{r}
+# Get cumulative case # and test # data for each date
+tests <- data %>% 
+  select(date, n_tests) %>% 
+  distinct() %>% 
+  mutate(tests_difference = n_tests - lag(n_tests)) %>% 
+  mutate(tests_difference = ifelse(tests_difference == 0,
+                                   yes = NA,
+                                   no = tests_difference))
+
+cases <- data %>% 
+  group_by(date) %>% 
+  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(cases_difference = total - lag(total))
+  
+
+# Join the two dataframes
+cases_tests <- left_join(tests, cases) %>% 
+  select(-n_tests, -total)
+
+# Calculate proportion of total tests that result in cases being detected
+cases_tests <- cases_tests %>% 
+  mutate(perc = round(100 * (cases_difference / tests_difference), 1))
+
+# Plot
+plot_ly(data = cases_tests,
+       x = ~date,
+       y = ~perc,
+       type = 'bar', 
+       name = 'Cases', 
+       hovertemplate = paste("<b>Date: </b>%{x}<br><b>Percent +: <b>%{y}"),
+       marker = list(color = 'rgb(49,130,189)',
+                     size = 10)) %>% 
+  layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Date',
+                        titlefont = list(size = 20)),
+           yaxis = list(title = 'Daily tests that are positive (%)',
+                        titlefont = list(size = 20)))
+```
+
+Row
+----
+
+### Plot 7: Doubling time for cases (in days) for each week
 
 ```{r}
 double <- data %>% 
@@ -1002,6 +1048,8 @@ plot_ly(data = double,
                         titlefont = list(size = 20)))
 
 ```
+
+###
 
 ```{r, eval = FALSE}
 ### Plot 3: Cases per 100,000 population (days since cases > 1/100,000 people)
@@ -1352,46 +1400,4 @@ plot_ly(data = data_daily,
             visible = 'legendonly')
 ```
 
-```{r eval = FALSE}
-### Percentage of daily tests that are positive for SARS-CoV-2
-
-# Get cumulative case # and test # data for each date
-tests <- data %>% 
-  select(date, n_tests) %>% 
-  distinct() %>% 
-  mutate(tests_difference = n_tests - lag(n_tests)) %>% 
-  mutate(tests_difference = ifelse(tests_difference == 0,
-                                   yes = NA,
-                                   no = tests_difference))
-
-cases <- data %>% 
-  group_by(date) %>% 
-  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  mutate(cases_difference = total - lag(total))
-  
-
-# Join the two dataframes
-cases_tests <- left_join(tests, cases) %>% 
-  select(-n_tests, -total)
-
-# Calculate proportion of total tests that result in cases being detected
-cases_tests <- cases_tests %>% 
-  mutate(perc = round(100 * (cases_difference / tests_difference), 1))
-
-# Plot
-plot_ly(data = cases_tests,
-       x = ~date,
-       y = ~perc,
-       type = 'bar', 
-       name = 'Cases', 
-       hovertemplate = paste("<b>Date: </b>%{x}<br><b>Percent +: <b>%{y}"),
-       marker = list(color = 'rgb(49,130,189)',
-                     size = 10)) %>% 
-  layout(font = list(family = 'Arial'),
-           xaxis = list(title = 'Date',
-                        titlefont = list(size = 20)),
-           yaxis = list(title = 'Daily tests that are positive (%)',
-                        titlefont = list(size = 20)))
-```
 
