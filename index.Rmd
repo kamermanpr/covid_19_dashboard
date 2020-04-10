@@ -34,7 +34,9 @@ library(plotly)
 
 # Import data
 ## ZA
-data <- read_csv('https://raw.githubusercontent.com/kamermanpr/covid_19_dataZA/master/data.csv')
+data <- read_csv('https://raw.githubusercontent.com/kamermanpr/covid_19_dataZA/master/data.csv') %>% 
+  # Make sure that the date column is a date
+  mutate(date = dmy(date))
 
 ## World
 data_jhu <- read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv')
@@ -173,8 +175,8 @@ unknown_missing <- data %>%
           n_recoveries = NA) %>% 
   left_join(data_totals) %>% 
   complete(date, provinces, fill = list(n_cases = 0, 
-                                          n_deaths = 0,
-                                          n_recoveries = 0)) %>% 
+                                        n_deaths = 0,
+                                        n_recoveries = 0)) %>% 
   fill(n_tests, total, .direction = 'down') %>% 
   select(date, provinces, n_cases, total) %>% 
     pivot_wider(names_from = 'provinces',
