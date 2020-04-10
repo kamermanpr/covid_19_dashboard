@@ -1051,7 +1051,36 @@ plot_ly(data = double,
 
 ```
 
-###
+### Plot 8: Cumulative deaths, by province
+
+```{r}
+# Edit za_map
+za_map2 <- za_map %>% 
+  # Add new tooltip
+  mutate(tooltip2 = paste0('<b>', province_names, '</b><br>',
+                           '<em>Number of deaths: </em>', n_deaths, '<br>'))
+
+# Generate plot object
+gg_province2 <- ggplot(data = za_map2) +
+    geom_sf_interactive(aes(tooltip = tooltip2,
+                            fill = n_deaths), 
+             color = '#000000',
+             size = 0.25) +
+    labs(title = str_glue('Date: {data$date[[nrow(data)]]}'),
+         subtitle = 'Move cursor over each province to see province-specific data\nGrey fill indicates no data available') +
+    scale_fill_distiller(name = 'Deaths', 
+                         palette = 'YlOrRd',
+                         direction = 1) +
+    theme_void() +
+    theme(panel.grid = element_line(colour = '#FFFFFF'),
+          plot.caption = element_text(face = 'italic',
+                                      hjust = 0))
+
+girafe(ggobj = gg_province2,
+       options = list(opts_hover(css = 'cursor:pointer;fill:#FFFFFF;stroke:#FFFFFF;'),
+                      opts_tooltip(css = 'background-color:#000000;font-family:sans-serif,arial;font-size:80%;color:#FFFFFF;padding:10px;border-radius:10px 10px 10px 10px;'),
+                      opts_sizing(width = 0.67)))
+```
 
 ```{r, eval = FALSE}
 ### Plot 3: Cases per 100,000 population (days since cases > 1/100,000 people)
