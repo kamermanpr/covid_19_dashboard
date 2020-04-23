@@ -324,7 +324,7 @@ data_jhu2 <- data_jhu %>%
   select(-Lat, -Long) %>% 
   filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden', 'Denmark',
                         'Netherlands', 'Australia', 'New Zealand', 'Canada',
-                        'United Kingdom', 'Italy', 'South Africa'))
+                        'United Kingdom', 'Italy', 'South Africa', 'Cyprus'))
 
 # Process data
 ## The Netherlands
@@ -334,7 +334,7 @@ jhu_ned2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'ned_count') %>% 
-  filter(ned_count > 95) %>% 
+  filter(ned_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, ned_count)
 
@@ -348,7 +348,7 @@ jhu_aus2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'australia_count') %>% 
-  filter(australia_count > 95) %>% 
+  filter(australia_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, australia_count)
 
@@ -362,9 +362,20 @@ jhu_canada2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'canada_count') %>% 
-  filter(canada_count > 95) %>% 
+  filter(canada_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, canada_count)
+
+## Cyprus
+jhu_cy2 <- data_jhu2 %>% 
+  filter(country == 'Cyprus' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2)-1),
+               names_to = 'date',
+               values_to = 'cy_count') %>% 
+  filter(cy_count >= 95) %>% 
+  mutate(days = row_number()) %>%
+  select(days, cy_count)
 
 ## New Zealand
 jhu_nz2 <- data_jhu2 %>% 
@@ -373,7 +384,7 @@ jhu_nz2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'nz_count') %>% 
-  filter(nz_count > 95) %>% 
+  filter(nz_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, nz_count)
 
@@ -387,7 +398,7 @@ jhu_china2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'china_count') %>% 
-  filter(china_count > 95) %>% 
+  filter(china_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, china_count)
 
@@ -401,7 +412,7 @@ jhu_us2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'us_count') %>%
-  filter(us_count > 95) %>% 
+  filter(us_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, us_count)
 
@@ -412,7 +423,7 @@ jhu_brazil2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'brazil_count') %>% 
-  filter(brazil_count > 95) %>% 
+  filter(brazil_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, brazil_count)
 
@@ -424,7 +435,7 @@ jhu_france2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'france_count') %>% 
-  filter(france_count > 95) %>% 
+  filter(france_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, france_count)
 
@@ -436,7 +447,7 @@ jhu_uk2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'uk_count') %>% 
-  filter(uk_count > 95) %>% 
+  filter(uk_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, uk_count)
 
@@ -447,7 +458,7 @@ jhu_italy2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'italy_count') %>% 
-  filter(italy_count > 95) %>% 
+  filter(italy_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, italy_count)
 
@@ -458,7 +469,7 @@ jhu_za2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'za_count') %>% 
-  filter(za_count > 95) %>% 
+  filter(za_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, za_count)
 
@@ -469,7 +480,7 @@ jhu_sweden2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'sweden_count') %>% 
-  filter(sweden_count > 95) %>% 
+  filter(sweden_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, sweden_count)
 
@@ -480,7 +491,7 @@ jhu_denmark2 <- data_jhu2 %>%
   pivot_longer(cols = 2:(ncol(data_jhu2)-1),
                names_to = 'date',
                values_to = 'denmark_count') %>% 
-  filter(denmark_count > 95) %>% 
+  filter(denmark_count >= 95) %>% 
   mutate(days = row_number()) %>%
   select(days, denmark_count)
 
@@ -497,7 +508,8 @@ data_jhu3 <- jhu_china2 %>%
   left_join(jhu_ned2) %>% 
   left_join(jhu_za2) %>% 
   left_join(jhu_sweden2) %>% 
-  left_join(jhu_canada2)
+  left_join(jhu_canada2) %>% 
+  left_join(jhu_cy2)
 
 # Plot
 plot_ly(data = data_jhu3,
@@ -522,6 +534,9 @@ plot_ly(data = data_jhu3,
             visible = 'legendonly') %>% 
   add_trace(y = ~canada_count,
             name = 'Canada',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~cy_count,
+            name = 'Cyprus',
             visible = 'legendonly') %>% 
   add_trace(y = ~denmark_count,
             name = 'Denmark',
@@ -557,7 +572,7 @@ deaths_jhu <- deaths_jhu %>%
   select(-Lat, -Long) %>% 
   filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden', 'Denmark',
                         'Netherlands', 'Australia', 'New Zealand', 'Canada',
-                        'United Kingdom', 'Italy', 'South Africa'))
+                        'United Kingdom', 'Italy', 'South Africa', 'Cyprus'))
 
 # Process data
 ## The Netherlands
@@ -576,7 +591,7 @@ cases_ned <- data_jhu2 %>%
                values_to = 'ned_cases') 
 
 ned <- left_join(deaths_ned, cases_ned) %>% 
-  filter(ned_cases > 95) %>% 
+  filter(ned_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, ned_deaths)
   
@@ -602,7 +617,7 @@ cases_aus <- data_jhu2 %>%
                values_to = 'aus_cases') 
 
 aus <- left_join(deaths_aus, cases_aus) %>% 
-  filter(aus_cases > 95) %>% 
+  filter(aus_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, aus_deaths)
 
@@ -628,9 +643,29 @@ cases_can <- data_jhu2 %>%
                values_to = 'can_cases') 
 
 can <- left_join(deaths_can, cases_can) %>% 
-  filter(can_cases > 95) %>% 
+  filter(can_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, can_deaths)
+
+## Cyprus
+deaths_cy <- deaths_jhu %>% 
+  filter(country == 'Cyprus' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(deaths_jhu) - 1),
+               names_to = 'date',
+               values_to = 'cy_deaths') 
+
+cases_cy <- data_jhu2 %>% 
+  filter(country == 'Cyprus' & is.na(`Province/State`)) %>% 
+  select(-`Province/State`) %>% 
+  pivot_longer(cols = 2:(ncol(data_jhu2) - 1),
+               names_to = 'date',
+               values_to = 'cy_cases') 
+
+cy <- left_join(deaths_cy, cases_cy) %>% 
+  filter(cy_cases >= 95) %>% 
+  mutate(days = row_number()) %>% 
+  select(days, cy_deaths)
 
 ## New Zealand
 deaths_nz <- deaths_jhu %>% 
@@ -648,7 +683,7 @@ cases_nz <- data_jhu2 %>%
                values_to = 'nz_cases') 
 
 nz <- left_join(deaths_nz, cases_nz) %>% 
-  filter(nz_cases > 95) %>% 
+  filter(nz_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, nz_deaths)
   
@@ -674,7 +709,7 @@ cases_china <- data_jhu2 %>%
                values_to = 'china_cases') 
 
 china <- left_join(deaths_china, cases_china) %>% 
-  filter(china_cases > 95) %>% 
+  filter(china_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, china_deaths)
 
@@ -694,7 +729,7 @@ cases_us <- data_jhu2 %>%
                values_to = 'us_cases') 
 
 us <- left_join(deaths_us, cases_us) %>% 
-  filter(us_cases > 95) %>% 
+  filter(us_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, us_deaths)
 
@@ -714,7 +749,7 @@ cases_bz <- data_jhu2 %>%
                values_to = 'bz_cases') 
 
 bz <- left_join(deaths_bz, cases_bz) %>% 
-  filter(bz_cases > 95) %>% 
+  filter(bz_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, bz_deaths)
 
@@ -734,7 +769,7 @@ cases_fr <- data_jhu2 %>%
                values_to = 'fr_cases') 
 
 fr <- left_join(deaths_fr, cases_fr) %>% 
-  filter(fr_cases > 95) %>% 
+  filter(fr_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, fr_deaths)
 
@@ -754,7 +789,7 @@ cases_uk <- data_jhu2 %>%
                values_to = 'uk_cases') 
 
 uk <- left_join(deaths_uk, cases_uk) %>% 
-  filter(uk_cases > 95) %>% 
+  filter(uk_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, uk_deaths)
 
@@ -774,7 +809,7 @@ cases_it <- data_jhu2 %>%
                values_to = 'it_cases') 
 
 it <- left_join(deaths_it, cases_it) %>% 
-  filter(it_cases > 95) %>% 
+  filter(it_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, it_deaths)
 
@@ -794,7 +829,7 @@ cases_za <- data_jhu2 %>%
                values_to = 'za_cases') 
 
 za <- left_join(deaths_za, cases_za) %>% 
-  filter(za_cases > 95) %>% 
+  filter(za_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, za_deaths)
 
@@ -814,7 +849,7 @@ cases_sw <- data_jhu2 %>%
                values_to = 'sw_cases') 
 
 sw <- left_join(deaths_sw, cases_sw) %>% 
-  filter(sw_cases > 95) %>% 
+  filter(sw_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, sw_deaths)
 
@@ -834,7 +869,7 @@ cases_dm <- data_jhu2 %>%
                values_to = 'dm_cases') 
 
 dm <- left_join(deaths_dm, cases_dm) %>% 
-  filter(dm_cases > 95) %>% 
+  filter(dm_cases >= 95) %>% 
   mutate(days = row_number()) %>% 
   select(days, dm_deaths)
 
@@ -851,7 +886,8 @@ deaths_jhu2 <- china %>%
   left_join(ned) %>% 
   left_join(za) %>% 
   left_join(sw) %>% 
-  left_join(can)
+  left_join(can) %>% 
+  left_join(cy)
 
 # Plot
 plot_ly(data = deaths_jhu2,
@@ -876,6 +912,9 @@ plot_ly(data = deaths_jhu2,
             visible = 'legendonly') %>%
   add_trace(y = ~can_deaths,
             name = 'Canada',
+            visible = 'legendonly') %>% 
+  add_trace(y = ~cy_deaths,
+            name = 'Cyprus',
             visible = 'legendonly') %>% 
   add_trace(y = ~dm_deaths,
             name = 'Denmark',
