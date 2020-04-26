@@ -53,10 +53,10 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE)
 ```
 
-Row {data-height=250}
+Row {data-height=200}
 ----------
 
-Welcome to my site, which gives updates on the state of COVID-19 cases and deaths in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}. For the moment, the site reports on: **i)** the cumulative number of cases in the South Africa and each of its provinces (Plot 1: top left panel); **ii)** the number of new cases per day in South Africa, by province (Plot 2: top right panel); **iii)** the cumulative number of cases in South Africa and some other countries, (Plot 3: 2nd row left panel); **iv)** the cumulative number of deaths in South Africa and some other countries (Plot 4: 2nd row right panel); **v)** daily number people tested, with daily number of cases overlaid (Plot 5: 3rd row left panel); **vi)** Percentage of people tested that are positive on each day (Plot 6: 3rd row right panel); **vii)** Doubling time (cases) each week (Plot 7: 4th row left panel); and **viii)** the cumulative number of deaths in the South Africa, by province (Plot 8: 4th row right panel).<br><br>**Note:**<br>- Selection bias means that these data in no way reflect the prevalence of the disease.<br>- Because testing capacities and testing strategies differ between countries, direct comparisons between countries is fraught.<br>- No provincial breakdown of the number of cases on: 2020-03-27, 2020-04-07<br>- No data on the number of tests completed on: 2020-03-25, 2020-04-07 (took mid-point between 2020-04-06 and 2020-04-08).
+Welcome to my COVID-19 dashboard, which gives daily updates on the state of COVID-19 in South Africa. These data are updated daily based on data released by the [National Institute of Communicable Diseases](http://www.nicd.ac.za/){target="_blank"}, and [Johns Hopkins University Coronavirus Resource Center](https://coronavirus.jhu.edu/map.html){target="_blank"}.<br><br>**Note:**<br>- Selection bias means that these data in no way reflect the prevalence of the disease.<br>- Because testing capacities and testing strategies differ between countries, direct comparisons between countries is fraught.<br>- No provincial breakdown of the number of cases on: 2020-03-27, 2020-04-07<br>- No data on the number of tests completed on: 2020-03-25, 2020-04-07 (took mid-point between 2020-04-06 and 2020-04-08).
 
 Row
 ----------
@@ -1118,6 +1118,96 @@ girafe(ggobj = gg_province2,
                       opts_tooltip(css = 'background-color:#000000;font-family:sans-serif,arial;font-size:80%;color:#FFFFFF;padding:10px;border-radius:10px 10px 10px 10px;'),
                       opts_sizing(width = 0.67)))
 ```
+
+Row
+----
+
+### Plot 9: Number of cases compared to one week ago
+
+```{r}
+cumulative_cases <- data %>% 
+  select(date, n_cases) %>% 
+  group_by(date) %>% 
+  summarise(n_cases = sum(n_cases)) %>% 
+  ungroup() %>% 
+  # Sort out NA by interpolation
+  mutate(n_cases = ifelse(is.na(n_cases),
+                          yes = lag(n_cases) + ((lead(n_cases) - lag(n_cases))/2),
+                          no = n_cases))
+
+# Calculate daily deaths
+daily_cases <- cumulative_cases %>% 
+  mutate(n_daily = n_cases - lag(n_cases, n = 1, default = 0))
+
+# Calculate seven day lag deaths
+lag_seven_cases <- daily_cases %>% 
+  mutate(lag_7_cases = n_daily - lag(n_daily, n = 7, default = 0)) %>% 
+  mutate(colour = ifelse(lag_7_cases >= 0,
+                         yes = 'Increasing',
+                         no = 'Decreasing'))
+
+plot_ly(data = lag_seven_cases,
+       x = ~date,
+       y = ~lag_7_cases,
+       color = ~colour,
+       colors = c('#4682B7', '#F08536'),
+       type = 'bar', 
+       hovertemplate = paste("<b>Date: </b>%{x}<br><b>Change in cases: <b>%{y}")) %>% 
+  layout(showlegend = FALSE,
+         font = list(family = 'Arial'),
+         xaxis = list(title = 'Date',
+                      titlefont = list(size = 20)),
+         yaxis = list(title = 'Week-on-week change in cases',
+                      titlefont = list(size = 20)))
+```
+
+### Plot 10: Number of deaths compared one week ago
+
+```{r}
+cumulative_deaths <- data %>% 
+  select(date, n_deaths) %>% 
+  group_by(date) %>% 
+  summarise(n_deaths = sum(n_deaths)) %>% 
+  ungroup() 
+  
+# Fill in missing data on 2020-04-07
+# Interpolated value ~ 15
+cumulative_deaths$n_deaths[cumulative_deaths$date == as.Date('2020-04-07')] <- 15
+
+# Calculate daily deaths
+daily_deaths <- cumulative_deaths %>% 
+  mutate(n_daily = n_deaths - lag(n_deaths, n = 1, default = 0))
+
+# Calculate seven day lag deaths
+lag_seven <- daily_deaths %>% 
+  mutate(lag_7_deaths = n_daily - lag(n_daily, n = 7, default = 0)) %>% 
+  mutate(colour = ifelse(lag_7_deaths >= 0,
+                         yes = 'Increasing',
+                         no = 'Decreasing'))
+
+plot_ly(data = lag_seven,
+       x = ~date,
+       y = ~lag_7_deaths,
+       color = ~colour,
+       colors = c('#4682B7', '#F08536'),
+       type = 'bar', 
+       hovertemplate = paste("<b>Date: </b>%{x}<br><b>Change in deaths: <b>%{y}")) %>% 
+  layout(showlegend = FALSE,
+         font = list(family = 'Arial'),
+         xaxis = list(title = 'Date',
+                      titlefont = list(size = 20)),
+         yaxis = list(title = 'Week-on-week change in deaths',
+                      titlefont = list(size = 20)))
+```
+
+
+
+
+
+
+
+
+
 
 ```{r, eval = FALSE}
 ### Plot 3: Cases per 100,000 population (days since cases > 1/100,000 people)
