@@ -9,6 +9,8 @@ output:
       - { title: "painblogR", href: "https://www.painblogr.org", align: right }
     social: [ "twitter", "facebook", "menu" ]
     source_code: "https://github.com/kamermanpr/covid_19_dashboard.git"
+    includes:
+      in_header: "google.html"
 ---
 
 <style type="text/css">
