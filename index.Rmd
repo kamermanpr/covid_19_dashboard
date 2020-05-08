@@ -1124,7 +1124,7 @@ girafe(ggobj = gg_province2,
 Row
 ----
 
-### Plot 9: Number of cases compared to one week ago
+### Plot 9: Number of daily cases compared to one week ago
 
 ```{r}
 cumulative_cases <- data %>% 
@@ -1163,7 +1163,7 @@ plot_ly(data = lag_seven_cases,
                       titlefont = list(size = 20)))
 ```
 
-### Plot 10: Number of deaths compared one week ago
+### Plot 10: Number of daily deaths compared one week ago
 
 ```{r}
 cumulative_deaths <- data %>% 
@@ -1201,14 +1201,6 @@ plot_ly(data = lag_seven,
          yaxis = list(title = 'Week-on-week change in deaths',
                       titlefont = list(size = 20)))
 ```
-
-
-
-
-
-
-
-
 
 
 ```{r, eval = FALSE}
