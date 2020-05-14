@@ -1163,7 +1163,7 @@ plot_ly(data = lag_seven_cases,
                       titlefont = list(size = 20)))
 ```
 
-### Plot 10: Number of daily deaths compared one week ago
+### Plot 10: Number of daily deaths compared to one week ago
 
 ```{r}
 cumulative_deaths <- data %>% 
