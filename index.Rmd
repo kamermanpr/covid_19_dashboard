@@ -1070,12 +1070,14 @@ double <- data %>%
   unnest(double_time) %>%
   ungroup() %>% 
   select(week, double_time) %>% 
-  mutate(week = as.character(dense_rank(week)),
-         double_time = round(double_time, 2))
+  mutate(week = dense_rank(week),
+         double_time = round(double_time, 2)) %>% 
+  mutate(week_fct = as.character(week),
+         week_fct = fct_reorder(week_fct, week))
 
 
 plot_ly(data = double,
-       x = ~week,
+       x = ~week_fct,
        y = ~double_time,
        type = 'bar', 
        name = 'Cases', 
@@ -1087,7 +1089,6 @@ plot_ly(data = double,
                         titlefont = list(size = 20)),
            yaxis = list(title = 'Doubling time (days)',
                         titlefont = list(size = 20)))
-
 ```
 
 ### Plot 8: Cumulative deaths, by province
