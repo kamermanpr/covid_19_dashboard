@@ -231,7 +231,47 @@ data_cases_wide %>%
               visible = 'legendonly')
 ```
 
-### Plot 2: Daily count of new cases, by province {.no-padding}
+### Plot 2: Cumulative cases vs cumulative recoveries (since 13 May 2020)
+
+```{r}
+recov <- data %>% 
+  # Filter for relevant dates
+  ## 2020-05-13 is the start of regular recover data from the NICD
+  filter(date > '2020-05-12') %>% 
+  # Collapse data within days
+  group_by(date) %>% 
+  summarise(cases = sum(n_cases),
+            recoveries = sum(n_recoveries)) 
+
+# Plot
+plot_ly(data = recov) %>% 
+  add_trace(x = ~date,
+            y = ~cases,
+            type = 'bar',
+            name = 'Cases',
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
+  add_trace(x = ~date,
+            y = ~recoveries,
+            type = 'bar',
+            marker = list(size = 10),
+            name = 'Recoveries', 
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Recoveries: <b>%{y}")) %>% 
+  layout(font = list(family = 'Arial'),
+         barmode = 'group',
+         xaxis = list(title = 'Date',
+                      titlefont = list(size = 20)),
+         yaxis = list(side = 'left',
+                      title = 'Cases/Recoveries',
+                      titlefont = list(size = 20),
+                      showgrid = FALSE,
+                      zeroline = FALSE))
+  
+```
+
+Row
+----------
+
+### Plot 3: Daily count of new cases, by province {.no-padding}
 
 ```{r}
 # Read shape file
@@ -282,13 +322,15 @@ date_past <- data %>%
   filter(date != max(date)) %>% 
   filter(date == max(date)) %>% 
   arrange(provinces) %>% 
-  select(provinces, n_cases) %>% 
-  rename(n_cases24 = n_cases)
+  select(provinces, n_cases, n_deaths) %>% 
+  rename(n_cases24 = n_cases,
+         n_deaths24 = n_deaths)
 
 za_map <- za_map %>% 
   arrange(provinces) %>% 
   left_join(date_past) %>% 
-  mutate(delta_cases = n_cases - n_cases24) %>% 
+  mutate(delta_cases = n_cases - n_cases24,
+         delta_deaths = n_deaths - n_deaths24) %>% 
   # Add a tooltip
   mutate(tooltip = paste0('<b>', province_names, '</b><br>',
                           '<em>New cases: </em>', delta_cases, '<br>'))
@@ -314,10 +356,41 @@ girafe(ggobj = gg_province,
                       opts_sizing(width = 0.67)))
 ```
 
+### Plot 4: Daily count of new deaths, by province {.no-padding}
+
+```{r}
+# Edit za_map
+za_map2 <- za_map %>% 
+  # Add new tooltip
+  mutate(tooltip2 = paste0('<b>', province_names, '</b><br>',
+                           '<em>Number of deaths: </em>', delta_deaths, '<br>'))
+
+# Generate plot object
+gg_province2 <- ggplot(data = za_map2) +
+    geom_sf_interactive(aes(tooltip = tooltip2,
+                            fill = delta_deaths), 
+             color = '#000000',
+             size = 0.25) +
+    labs(title = str_glue('Date: {data$date[[nrow(data)]]}'),
+         subtitle = 'Move cursor over each province to see province-specific data\nGrey fill indicates no data available') +
+    scale_fill_distiller(name = 'Deaths', 
+                         palette = 'YlOrRd',
+                         direction = 1) +
+    theme_void() +
+    theme(panel.grid = element_line(colour = '#FFFFFF'),
+          plot.caption = element_text(face = 'italic',
+                                      hjust = 0))
+
+girafe(ggobj = gg_province2,
+       options = list(opts_hover(css = 'cursor:pointer;fill:#FFFFFF;stroke:#FFFFFF;'),
+                      opts_tooltip(css = 'background-color:#000000;font-family:sans-serif,arial;font-size:80%;color:#FFFFFF;padding:10px;border-radius:10px 10px 10px 10px;'),
+                      opts_sizing(width = 0.67)))
+```
+
 Row
 ----------
 
-### Plot 3: Cumulative cases (days since 100th case)
+### Plot 5: Cumulative cases (days since 100th case)
 
 ```{r}
 # Select and filter data
@@ -566,7 +639,7 @@ plot_ly(data = data_jhu3,
             visible = 'legendonly')
 ```
 
-### Plot 4: Cumulative deaths (days since 100th case)
+### Plot 6: Cumulative deaths (days since 100th case)
 
 ```{r}
 deaths_jhu <- deaths_jhu %>% 
@@ -947,7 +1020,7 @@ plot_ly(data = deaths_jhu2,
 Row
 ----
 
-### Plot 5: Daily number of people tested (with overlay of daily number of cases)
+### Plot 7: Daily number of people tested (with overlay of daily number of cases)
 
 ```{r}
 # Get cumulative case # and test # data for each date
@@ -1001,7 +1074,7 @@ plot_ly(data = cases_tests) %>%
                        zeroline = FALSE))
 ```
 
-### Plot 6: Percentage of people tested who are positive (daily data)
+### Plot 8: Percentage of people tested who are positive (daily data)
 
 ```{r}
 # Get cumulative case # and test # data for each date
@@ -1042,84 +1115,6 @@ plot_ly(data = cases_tests,
                         titlefont = list(size = 20)),
            yaxis = list(title = 'Percent people tested who are positive (%)',
                         titlefont = list(size = 20)))
-```
-
-Row
-----
-
-### Plot 7: Doubling time for cases (in days) for each week
-
-```{r}
-double <- data %>% 
-  select(date, n_cases) %>% 
-  group_by(date) %>% 
-  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
-  mutate(week = week(date)) %>% 
-  group_by(week) %>% 
-  nest() %>% 
-  mutate(periods = map(.x = data,
-                      ~ 1 / (nrow(.x) - 1)),
-         first = map(.x = data,
-                     ~ first(.x$total)),
-         last = map(.x = data,
-                    ~ last(.x$total)),
-         compound_growth_rate = pmap(.l = list(periods, first,last),
-                                     ~ (((..3 / ..2)^..1) - 1)),
-         double_time = map(.x = compound_growth_rate,
-                           ~ log(2) / .x)) %>% 
-  unnest(double_time) %>%
-  ungroup() %>% 
-  select(week, double_time) %>% 
-  mutate(week = dense_rank(week),
-         double_time = round(double_time, 2)) %>% 
-  mutate(week_fct = as.character(week),
-         week_fct = fct_reorder(week_fct, week))
-
-
-plot_ly(data = double,
-       x = ~week_fct,
-       y = ~double_time,
-       type = 'bar', 
-       name = 'Cases', 
-       hovertemplate = paste("<b>Week: </b>%{x}<br><b>Doubling time (days): <b>%{y}"),
-       marker = list(color = 'rgb(49,130,189)',
-                     size = 10)) %>% 
-  layout(font = list(family = 'Arial'),
-           xaxis = list(title = 'Week',
-                        titlefont = list(size = 20)),
-           yaxis = list(title = 'Doubling time (days)',
-                        titlefont = list(size = 20)))
-```
-
-### Plot 8: Cumulative deaths, by province
-
-```{r}
-# Edit za_map
-za_map2 <- za_map %>% 
-  # Add new tooltip
-  mutate(tooltip2 = paste0('<b>', province_names, '</b><br>',
-                           '<em>Number of deaths: </em>', n_deaths, '<br>'))
-
-# Generate plot object
-gg_province2 <- ggplot(data = za_map2) +
-    geom_sf_interactive(aes(tooltip = tooltip2,
-                            fill = n_deaths), 
-             color = '#000000',
-             size = 0.25) +
-    labs(title = str_glue('Date: {data$date[[nrow(data)]]}'),
-         subtitle = 'Move cursor over each province to see province-specific data\nGrey fill indicates no data available') +
-    scale_fill_distiller(name = 'Deaths', 
-                         palette = 'YlOrRd',
-                         direction = 1) +
-    theme_void() +
-    theme(panel.grid = element_line(colour = '#FFFFFF'),
-          plot.caption = element_text(face = 'italic',
-                                      hjust = 0))
-
-girafe(ggobj = gg_province2,
-       options = list(opts_hover(css = 'cursor:pointer;fill:#FFFFFF;stroke:#FFFFFF;'),
-                      opts_tooltip(css = 'background-color:#000000;font-family:sans-serif,arial;font-size:80%;color:#FFFFFF;padding:10px;border-radius:10px 10px 10px 10px;'),
-                      opts_sizing(width = 0.67)))
 ```
 
 Row
@@ -1203,6 +1198,52 @@ plot_ly(data = lag_seven,
                       titlefont = list(size = 20)))
 ```
 
+Row
+----
+
+### Plot 11: Doubling time for cases (in days) for each week
+
+```{r}
+double <- data %>% 
+  select(date, n_cases) %>% 
+  group_by(date) %>% 
+  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
+  mutate(week = week(date)) %>% 
+  group_by(week) %>% 
+  nest() %>% 
+  mutate(periods = map(.x = data,
+                      ~ 1 / (nrow(.x) - 1)),
+         first = map(.x = data,
+                     ~ first(.x$total)),
+         last = map(.x = data,
+                    ~ last(.x$total)),
+         compound_growth_rate = pmap(.l = list(periods, first,last),
+                                     ~ (((..3 / ..2)^..1) - 1)),
+         double_time = map(.x = compound_growth_rate,
+                           ~ log(2) / .x)) %>% 
+  unnest(double_time) %>%
+  ungroup() %>% 
+  select(week, double_time) %>% 
+  mutate(week = dense_rank(week),
+         double_time = round(double_time, 2)) %>% 
+  mutate(week_fct = as.character(week),
+         week_fct = fct_reorder(week_fct, week))
+
+
+plot_ly(data = double,
+       x = ~week_fct,
+       y = ~double_time,
+       type = 'bar', 
+       name = 'Cases', 
+       hovertemplate = paste("<b>Week: </b>%{x}<br><b>Doubling time (days): <b>%{y}"),
+       marker = list(color = 'rgb(49,130,189)',
+                     size = 10)) %>% 
+  layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Week',
+                        titlefont = list(size = 20)),
+           yaxis = list(title = 'Doubling time (days)',
+                        titlefont = list(size = 20)))
+```
 
 ```{r, eval = FALSE}
 ### Plot 3: Cases per 100,000 population (days since cases > 1/100,000 people)
@@ -1553,4 +1594,4 @@ plot_ly(data = data_daily,
             visible = 'legendonly')
 ```
 
-
+###
