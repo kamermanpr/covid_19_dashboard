@@ -1120,7 +1120,100 @@ plot_ly(data = cases_tests,
 Row
 ----
 
-### Plot 9: Number of daily cases compared to one week ago
+### Plot 9: Doubling time for cases (in days) for each week
+
+```{r}
+double <- data %>% 
+  select(date, n_cases) %>% 
+  group_by(date) %>% 
+  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
+  mutate(week = week(date)) %>% 
+  group_by(week) %>% 
+  nest() %>% 
+  mutate(periods = map(.x = data,
+                      ~ 1 / (nrow(.x))),
+         first = map(.x = data,
+                     ~ first(.x$total)),
+         last = map(.x = data,
+                    ~ last(.x$total)),
+         compound_growth_rate = pmap(.l = list(periods, first,last),
+                                     ~ (((..3 / ..2)^..1) - 1)),
+         double_time = map(.x = compound_growth_rate,
+                           ~ log(2) / .x)) %>% 
+  unnest(double_time) %>%
+  ungroup() %>% 
+  select(week, double_time) %>% 
+  mutate(week = dense_rank(week),
+         double_time = round(double_time, 2)) %>% 
+  mutate(week_fct = as.character(week),
+         week_fct = fct_reorder(week_fct, week))
+
+
+plot_ly(data = double,
+       x = ~week_fct,
+       y = ~double_time,
+       type = 'bar', 
+       name = 'Cases', 
+       hovertemplate = paste("<b>Week: </b>%{x}<br><b>Doubling time (days): <b>%{y}"),
+       marker = list(color = 'rgb(49,130,189)',
+                     size = 10)) %>% 
+  layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Week',
+                        titlefont = list(size = 20)),
+           yaxis = list(title = 'Doubling time (days)',
+                        titlefont = list(size = 20)))
+```
+
+### Plot 10: Doubling time for deaths (in days) for each week
+
+```{r}
+double2 <- data %>% 
+  select(date, n_deaths) %>% 
+  group_by(date) %>% 
+  summarise(total = sum(n_deaths, na.rm = TRUE)) %>% 
+  mutate(week = week(date)) %>% 
+  group_by(week) %>% 
+  nest() %>% 
+  mutate(periods = map(.x = data,
+                      ~ 1 / (nrow(.x))),
+         first = map(.x = data,
+                     ~ first(.x$total)),
+         last = map(.x = data,
+                    ~ last(.x$total)),
+         compound_growth_rate = pmap(.l = list(periods, first,last),
+                                     ~ (((..3 / ..2)^..1) - 1)),
+         double_time = map(.x = compound_growth_rate,
+                           ~ log(2) / .x)) %>% 
+  unnest(double_time) %>%
+  ungroup() %>% 
+  select(week, double_time) %>% 
+  mutate(week = dense_rank(week),
+         double_time = round(double_time, 2)) %>% 
+  mutate(week_fct = as.character(week),
+         week_fct = fct_reorder(week_fct, week)) %>% 
+  mutate(double_time = ifelse(is.nan(double_time) | double_time < 0,
+                              yes = 0,
+                              no = double_time))
+
+plot_ly(data = double2,
+       x = ~week_fct,
+       y = ~double_time,
+       type = 'bar', 
+       name = 'Cases', 
+       hovertemplate = paste("<b>Week: </b>%{x}<br><b>Doubling time (days): <b>%{y}"),
+       marker = list(color = 'rgb(49,130,189)',
+                     size = 10)) %>% 
+  layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Week',
+                        titlefont = list(size = 20)),
+           yaxis = list(title = 'Doubling time (days)',
+                        titlefont = list(size = 20)))
+```
+
+Row
+----------
+
+### Plot 11: Number of daily cases compared to one week ago
 
 ```{r}
 cumulative_cases <- data %>% 
@@ -1159,7 +1252,7 @@ plot_ly(data = lag_seven_cases,
                       titlefont = list(size = 20)))
 ```
 
-### Plot 10: Number of daily deaths compared to one week ago
+### Plot 12: Number of daily deaths compared to one week ago
 
 ```{r}
 cumulative_deaths <- data %>% 
@@ -1196,53 +1289,6 @@ plot_ly(data = lag_seven,
                       titlefont = list(size = 20)),
          yaxis = list(title = 'Week-on-week change in deaths',
                       titlefont = list(size = 20)))
-```
-
-Row
-----
-
-### Plot 11: Doubling time for cases (in days) for each week
-
-```{r}
-double <- data %>% 
-  select(date, n_cases) %>% 
-  group_by(date) %>% 
-  summarise(total = sum(n_cases, na.rm = TRUE)) %>% 
-  mutate(week = week(date)) %>% 
-  group_by(week) %>% 
-  nest() %>% 
-  mutate(periods = map(.x = data,
-                      ~ 1 / (nrow(.x) - 1)),
-         first = map(.x = data,
-                     ~ first(.x$total)),
-         last = map(.x = data,
-                    ~ last(.x$total)),
-         compound_growth_rate = pmap(.l = list(periods, first,last),
-                                     ~ (((..3 / ..2)^..1) - 1)),
-         double_time = map(.x = compound_growth_rate,
-                           ~ log(2) / .x)) %>% 
-  unnest(double_time) %>%
-  ungroup() %>% 
-  select(week, double_time) %>% 
-  mutate(week = dense_rank(week),
-         double_time = round(double_time, 2)) %>% 
-  mutate(week_fct = as.character(week),
-         week_fct = fct_reorder(week_fct, week))
-
-
-plot_ly(data = double,
-       x = ~week_fct,
-       y = ~double_time,
-       type = 'bar', 
-       name = 'Cases', 
-       hovertemplate = paste("<b>Week: </b>%{x}<br><b>Doubling time (days): <b>%{y}"),
-       marker = list(color = 'rgb(49,130,189)',
-                     size = 10)) %>% 
-  layout(font = list(family = 'Arial'),
-           xaxis = list(title = 'Week',
-                        titlefont = list(size = 20)),
-           yaxis = list(title = 'Doubling time (days)',
-                        titlefont = list(size = 20)))
 ```
 
 ```{r, eval = FALSE}
@@ -1593,5 +1639,3 @@ plot_ly(data = data_daily,
             marker = list(color = 'rgb(204,204,204)'),
             visible = 'legendonly')
 ```
-
-###
