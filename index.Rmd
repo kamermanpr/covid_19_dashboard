@@ -205,8 +205,7 @@ data_cases_wide %>%
             hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
     layout(font = list(family = 'Arial'),
            xaxis = list(title = 'Date',
-                        titlefont = list(size = 20), 
-                        nticks = nrow(data_cases_wide)),
+                        titlefont = list(size = 20)),
            yaxis = list(title = 'Cumulative number of cases',
                         titlefont = list(size = 20))) %>% 
     add_trace(y = ~EC, name = 'Eastern Cape', 
@@ -231,7 +230,66 @@ data_cases_wide %>%
               visible = 'legendonly')
 ```
 
-### Plot 2: Cumulative cases vs cumulative recoveries (since 13 May 2020)
+### Plot 2: Cumulative number of deaths over time
+
+```{r}
+data_dtotal <- data %>% 
+  select(date, provinces, n_deaths) %>% 
+  pivot_wider(names_from = provinces,
+              values_from = n_deaths) %>% 
+  # Fix <NA> Unknown
+  mutate(Unknown = ifelse(is.na(Unknown),
+                          yes = 0,
+                          no = Unknown)) %>% 
+  # Fix issue with 0 Unknown on 2020-04-07
+  mutate(Unknown = case_when(
+    date == '2020-04-07' ~ lag(Unknown) + ((lead(Unknown) - lag(Unknown)) / 2),
+    TRUE ~ Unknown
+  )) %>% 
+  # Calculate total column
+  mutate(total = rowSums(.[2:11])) %>% 
+  # Remove Unknown column
+  select(-Unknown)
+
+# Plot the data using plotly
+## (damn I hate plotly's api)
+data_dtotal %>%     
+    plot_ly(x = ~date, 
+            y = ~total, 
+            name = 'Total',
+            type = 'scatter', 
+            mode = 'lines+markers',
+            marker = list(size = 10),
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
+    layout(font = list(family = 'Arial'),
+           xaxis = list(title = 'Date',
+                        titlefont = list(size = 20)),
+           yaxis = list(title = 'Cumulative number of deaths',
+                        titlefont = list(size = 20))) %>% 
+    add_trace(y = ~EC, name = 'Eastern Cape', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~FS, name = 'Free State', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~GP, name = 'Gauteng', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~KZN, name = 'KwaZulu-Natal',
+              visible = 'legendonly') %>% 
+    add_trace(y = ~LP, name = 'Limpopo', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~MP, name = 'Mpumalanga', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~NW, name = 'North West', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~NC, name = 'Northern Cape', 
+              visible = 'legendonly') %>% 
+    add_trace(y = ~WC, name = 'Western Cape', 
+              visible = 'legendonly') 
+```
+
+Row
+---------
+
+### Plot 3: Cumulative cases vs cumulative recoveries (since 13 May 2020)
 
 ```{r}
 recov <- data %>% 
@@ -268,10 +326,53 @@ plot_ly(data = recov) %>%
   
 ```
 
+### Plot 4: Daily number of new cases and recoveries
+
+```{r}
+recov2 <- data %>% 
+  # Filter for relevant dates
+  ## 2020-05-13 is the start of regular recover data from the NICD
+  filter(date >= '2020-05-12') %>% 
+  # Collapse data within days
+  group_by(date) %>% 
+  summarise(cases = sum(n_cases),
+            recoveries = sum(n_recoveries)) %>% 
+  # Calculate daily cases/recoveries
+  ungroup() %>% 
+  mutate(new_cases = cases - lag(cases),
+         new_recoveries = recoveries - lag(recoveries)) %>% 
+  # Filter 
+  filter(date > '2020-05-12')
+
+# Plot
+plot_ly(data = recov2) %>% 
+  add_trace(x = ~date,
+            y = ~new_cases,
+            type = 'bar',
+            name = 'Cases',
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}")) %>% 
+  add_trace(x = ~date,
+            y = ~new_recoveries,
+            type = 'bar',
+            marker = list(size = 10),
+            name = 'Recoveries', 
+            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Recoveries: <b>%{y}")) %>% 
+  layout(font = list(family = 'Arial'),
+         barmode = 'group',
+         xaxis = list(title = 'Date',
+                      titlefont = list(size = 20)),
+         yaxis = list(side = 'left',
+                      title = 'Daily cases/recoveries',
+                      titlefont = list(size = 20),
+                      showgrid = FALSE,
+                      zeroline = FALSE))
+  
+```
+
 Row
 ----------
 
-### Plot 3: Daily count of new cases, by province {.no-padding}
+### Plot 5: Daily count of new cases, by province {.no-padding}
 
 ```{r}
 # Read shape file
@@ -356,7 +457,7 @@ girafe(ggobj = gg_province,
                       opts_sizing(width = 0.67)))
 ```
 
-### Plot 4: Daily count of new deaths, by province {.no-padding}
+### Plot 6: Daily count of new deaths, by province {.no-padding}
 
 ```{r}
 # Edit za_map
@@ -390,7 +491,7 @@ girafe(ggobj = gg_province2,
 Row
 ----------
 
-### Plot 5: Cumulative cases (days since 100th case)
+### Plot 7: Cumulative cases (days since 100th case)
 
 ```{r}
 # Select and filter data
@@ -639,7 +740,7 @@ plot_ly(data = data_jhu3,
             visible = 'legendonly')
 ```
 
-### Plot 6: Cumulative deaths (days since 100th case)
+### Plot 8: Cumulative deaths (days since 100th case)
 
 ```{r}
 deaths_jhu <- deaths_jhu %>% 
@@ -1020,7 +1121,7 @@ plot_ly(data = deaths_jhu2,
 Row
 ----
 
-### Plot 7: Daily number of people tested (with overlay of daily number of cases)
+### Plot 9: Daily number of people tested (with overlay of daily number of cases)
 
 ```{r}
 # Get cumulative case # and test # data for each date
@@ -1074,7 +1175,7 @@ plot_ly(data = cases_tests) %>%
                        zeroline = FALSE))
 ```
 
-### Plot 8: Percentage of people tested who are positive (daily data)
+### Plot 10: Percentage of people tested who are positive (daily data)
 
 ```{r}
 # Get cumulative case # and test # data for each date
@@ -1120,7 +1221,7 @@ plot_ly(data = cases_tests,
 Row
 ----
 
-### Plot 9: Doubling time for cases (in days) for each week
+### Plot 11: Doubling time for cases (in days) for each week
 
 ```{r}
 double <- data %>% 
@@ -1164,7 +1265,7 @@ plot_ly(data = double,
                         titlefont = list(size = 20)))
 ```
 
-### Plot 10: Doubling time for deaths (in days) for each week
+### Plot 12: Doubling time for deaths (in days) for each week
 
 ```{r}
 double2 <- data %>% 
@@ -1213,7 +1314,7 @@ plot_ly(data = double2,
 Row
 ----------
 
-### Plot 11: Number of daily cases compared to one week ago
+### Plot 13: Number of daily cases compared to one week ago
 
 ```{r}
 cumulative_cases <- data %>% 
@@ -1252,7 +1353,7 @@ plot_ly(data = lag_seven_cases,
                       titlefont = list(size = 20)))
 ```
 
-### Plot 12: Number of daily deaths compared to one week ago
+### Plot 14: Number of daily deaths compared to one week ago
 
 ```{r}
 cumulative_deaths <- data %>% 
@@ -1289,353 +1390,4 @@ plot_ly(data = lag_seven,
                       titlefont = list(size = 20)),
          yaxis = list(title = 'Week-on-week change in deaths',
                       titlefont = list(size = 20)))
-```
-
-```{r, eval = FALSE}
-### Plot 3: Cases per 100,000 population (days since cases > 1/100,000 people)
-
-# Select and filter data
-data_jhu <- data_jhu %>% 
-  rename(country = `Country/Region`) %>% 
-  select(-Lat, -Long) %>% 
-  filter(country %in% c('China', 'US', 'Brazil', 'France', 'Sweden', 'Denmark',
-                        'Netherlands', 'Australia', 'New Zealand', 
-                        'United Kingdom', 'Italy', 'South Africa'))
-
-# Process data
-## The Netherlands
-jhu_netherlands <- data_jhu %>% 
-  filter(country == 'Netherlands' & is.na(`Province/State`)) %>% 
-  select(-`Province/State`) %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'ned_count') %>% 
-  mutate(cum_sum = cumsum(ned_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(ned_count.100k = (ned_count / 17125596) * 100000) %>% 
-  filter(ned_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>%
-  select(date, days, ned_count, ned_count.100k) %>% 
-  mutate(ned_count.100k = round(ned_count.100k, 4)) %>% 
-  select(-date)
-
-## Australia
-jhu_australia <- data_jhu %>% 
-  filter(country == 'Australia') %>% 
-  select(-`Province/State`) %>% 
-  summarise_if(is.numeric, sum) %>% 
-  mutate(country = 'Australia') %>% 
-  select(country, everything())  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'australia_count') %>% 
-  mutate(cum_sum = cumsum(australia_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(australia_count.100k = (australia_count / 25499884) * 100000) %>% 
-  filter(australia_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>%
-  select(date, days, australia_count, australia_count.100k) %>% 
-  mutate(australia_count.100k = round(australia_count.100k, 4)) %>% 
-  select(-date)
-
-## New Zealand
-jhu_nz <- data_jhu %>% 
-  filter(country == 'New Zealand' & is.na(`Province/State`)) %>% 
-  select(-`Province/State`) %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'nz_count') %>% 
-  mutate(cum_sum = cumsum(nz_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(nz_count.100k = (nz_count / 4822233) * 100000) %>% 
-  filter(nz_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>%
-  select(date, days, nz_count, nz_count.100k) %>% 
-  mutate(nz_count.100k = round(nz_count.100k, 4)) %>% 
-  select(-date)
-
-## China
-jhu_china <- data_jhu %>% 
-  filter(country == 'China') %>% 
-  select(-`Province/State`) %>% 
-  summarise_if(is.numeric, sum) %>% 
-  mutate(country = 'China') %>% 
-  select(country, everything())  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'china_count') %>% 
-  mutate(cum_sum = cumsum(china_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(china_count.100k = (china_count / 1439323766) * 100000) %>% 
-  filter(china_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>%
-  select(date, days, china_count, china_count.100k) %>% 
-  mutate(china_count.100k = round(china_count.100k, 4)) %>% 
-  select(-date)
-
-## USA
-jhu_us <- data_jhu %>% 
-  filter(country == 'US') %>% 
-  select(-`Province/State`) %>% 
-  summarise_if(is.numeric, sum) %>% 
-  mutate(country = 'US') %>% 
-  select(country, everything())  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'us_count') %>%
-  mutate(cum_sum = cumsum(us_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(us_count.100k = (us_count / 331002651) * 100000) %>% 
-  filter(us_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>% 
-  select(date, days, us_count, us_count.100k) %>% 
-  mutate(us_count.100k = round(us_count.100k, 4)) %>% 
-  select(-date)
-
-## Brazil
-jhu_brazil <- data_jhu %>% 
-  filter(country == 'Brazil') %>% 
-  select(-`Province/State`)  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'brazil_count') %>% 
-  mutate(cum_sum = cumsum(brazil_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(brazil_count.100k = (brazil_count / 212559417) * 100000) %>% 
-  filter(brazil_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>% 
-  select(date, days, brazil_count, brazil_count.100k) %>% 
-  mutate(brazil_count.100k = round(brazil_count.100k, 4)) %>% 
-  select(-date)
-
-## France
-jhu_france <- data_jhu %>% 
-  filter(country == 'France') %>% 
-  filter(is.na(`Province/State`)) %>% 
-  select(-`Province/State`) %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'france_count') %>% 
-  mutate(cum_sum = cumsum(france_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(france_count.100k = (france_count / 65273511) * 100000) %>% 
-  filter(france_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>% 
-  select(date, days, france_count, france_count.100k) %>% 
-  mutate(france_count.100k = round(france_count.100k, 4)) %>% 
-  select(-date)
-
-## United Kingdom
-jhu_uk <- data_jhu %>% 
-  filter(country == 'United Kingdom') %>% 
-  filter(is.na(`Province/State`)) %>% 
-  select(-`Province/State`)  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'uk_count') %>% 
-  mutate(cum_sum = cumsum(uk_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>%  
-  mutate(uk_count.100k = (uk_count / 67886011) * 100000) %>% 
-  filter(uk_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>% 
-  select(date, days, uk_count, uk_count.100k) %>% 
-  mutate(uk_count.100k = round(uk_count.100k, 4)) %>% 
-  select(-date)
-
-## Italy
-jhu_italy <- data_jhu %>% 
-  filter(country == 'Italy') %>% 
-  select(-`Province/State`)  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'italy_count') %>% 
-  mutate(cum_sum = cumsum(italy_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>%  
-  mutate(italy_count.100k = (italy_count / 60461826) * 100000) %>% 
-  filter(italy_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>% 
-  select(date, days, italy_count, italy_count.100k) %>% 
-  mutate(italy_count.100k = round(italy_count.100k, 4)) %>% 
-  select(-date)
-
-## South Africa
-jhu_za <- data_jhu %>% 
-  filter(country == 'South Africa') %>% 
-  select(-`Province/State`)  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'za_count') %>% 
-  mutate(cum_sum = cumsum(za_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(za_count.100k = (za_count / 59308690) * 100000) %>% 
-  filter(za_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>% 
-  select(date, days, za_count, za_count.100k) %>% 
-  mutate(za_count.100k = round(za_count.100k, 4)) %>% 
-  select(-date)
-
-## Sweden
-jhu_sweden <- data_jhu %>% 
-  filter(country == 'Sweden') %>% 
-  select(-`Province/State`)  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'sweden_count') %>% 
-  mutate(cum_sum = cumsum(sweden_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(sweden_count.100k = (sweden_count / 10099265) * 100000) %>% 
-  filter(sweden_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>% 
-  select(date, days, sweden_count, sweden_count.100k) %>% 
-  mutate(sweden_count.100k = round(sweden_count.100k, 4)) %>% 
-  select(-date)
-
-## Denmark
-jhu_denmark <- data_jhu %>% 
-  filter(country == 'Denmark' & is.na(`Province/State`)) %>% 
-  select(-`Province/State`)  %>% 
-  pivot_longer(cols = 2:(ncol(data_jhu)-1),
-               names_to = 'date',
-               values_to = 'denmark_count') %>% 
-  mutate(cum_sum = cumsum(denmark_count)) %>% 
-  filter(cum_sum > 0) %>% 
-  select(-cum_sum) %>% 
-  mutate(denmark_count.100k = (denmark_count / 5787330) * 100000) %>% 
-  filter(denmark_count.100k >= 1) %>% 
-  mutate(days = row_number()) %>% 
-  select(date, days, denmark_count, denmark_count.100k) %>% 
-  mutate(denmark_count.100k = round(denmark_count.100k, 4)) %>% 
-  select(-date)
-
-# Bind columns
-data_jhu2 <- jhu_italy %>% 
-  left_join(jhu_us) %>% 
-  left_join(jhu_brazil) %>% 
-  left_join(jhu_denmark) %>% 
-  left_join(jhu_france) %>% 
-  left_join(jhu_nz) %>% 
-  left_join(jhu_uk) %>% 
-  left_join(jhu_australia) %>% 
-  left_join(jhu_netherlands) %>% 
-  left_join(jhu_za) %>% 
-  left_join(jhu_sweden)
-
-# Plot
-plot_ly(data = data_jhu2,
-        x = ~days,
-        y = ~za_count.100k,
-        name = 'South Africa',
-        type = 'scatter',
-        marker = list(size = 0),
-        mode = 'lines+markers',
-        hovertemplate = paste("<b>Days: </b>%{x}<br><b>Cases/100,000 pop: <b>%{y}")) %>% 
-    layout(font = list(family = 'Arial'),
-           xaxis = list(title = 'Days since cases > 1 per 100,000',
-                        titlefont = list(size = 20)),
-           yaxis = list(type = 'log',
-                        title = 'Cumulative cases/100,000 people (log10)',
-                        titlefont = list(size = 20))) %>% 
-  add_trace(y = ~australia_count.100k,
-            name = 'Australia',
-            visible = 'legendonly') %>% 
-  add_trace(y = ~brazil_count.100k,
-            name = 'Brazil',
-            visible = 'legendonly') %>% 
-  add_trace(y = ~denmark_count.100k,
-            name = 'Denmark',
-            visible = 'legendonly') %>% 
-  add_trace(y = ~france_count.100k,
-            name = 'France',
-            visible = 'legendonly') %>% 
-  add_trace(y = ~italy_count.100k,
-            name = 'Italy',
-            visible = 'legendonly') %>% 
-  add_trace(y = ~ned_count.100k,
-            name = 'Netherlands',
-            visible = 'legendonly') %>% 
-  add_trace(y = ~nz_count.100k,
-            name = 'New Zealand',
-            visible = 'legendonly') %>%
-  add_trace(y = ~sweden_count.100k,
-            name = 'Sweden',
-            visible = 'legendonly') %>%
-  add_trace(y = ~uk_count.100k,
-            name = 'UK',
-            visible = 'legendonly') %>% 
-  add_trace(y = ~us_count.100k,
-            name = 'USA',
-            visible = 'legendonly')
-```
-
-```{r eval = FALSE}
-### Daily count of new cases and recoveries, for the country
-
-# Calculate cumulative cases
-data_daily <- data %>% 
-  select(date, n_cases) %>% 
-  group_by(date) %>% 
-  summarise(n_cases = sum(n_cases, na.rm = TRUE)) %>% 
-  ungroup()
-
-# Top slice the first row of the cumulative cases data
-top_slice <- data_daily %>% 
-  filter(date == '2020-3-12') 
-
-# Calculate daily new cases totals 
-data_daily <- data_daily %>% 
-  mutate(n_cases = n_cases - lag(n_cases)) %>% 
-  filter(date != '2020-03-12') %>% 
-  # Add back the top sliced data
-  bind_rows(top_slice) %>% 
-  arrange(date) %>% 
-  mutate(date = as.Date(date))
-
-# Process recover_jhu data
-recover_jhu <- recover_jhu %>% 
-  filter(`Country/Region` == 'South Africa') %>% 
-  select(-c(1:4)) %>% 
-  pivot_longer(cols = everything(),
-               names_to = 'date',
-               values_to = 'n_recoveries') %>% 
-  mutate(date = mdy(date)) %>% 
-  filter(date >= as.Date('2020-03-12')) %>% 
-  mutate(n_recoveries = n_recoveries - lag(n_recoveries)) %>% 
-  mutate(n_recoveries = ifelse(is.na(n_recoveries), 
-                               yes = 0,
-                               no = n_recoveries))
-
-data_daily <- data_daily %>% 
-  left_join(recover_jhu)
-
-# Plot
-plot_ly(data = data_daily,
-       x = ~date,
-       y = ~n_cases,
-       type = 'bar', 
-       name = 'Cases', 
-       hovertemplate = paste("<b>Date: </b>%{x}<br><b>Cases: <b>%{y}"),
-       marker = list(color = 'rgb(49,130,189)',
-                     size = 10)) %>% 
-  layout(font = list(family = 'Arial'),
-           xaxis = list(title = 'Date',
-                        titlefont = list(size = 20), 
-                        nticks = nrow(data_daily)),
-           yaxis = list(title = 'Daily count',
-                        titlefont = list(size = 20))) %>% 
-  add_trace(y = ~n_recoveries, 
-            name = 'Recoveries', 
-            hovertemplate = paste("<b>Date: </b>%{x}<br><b>Recoveries: <b>%{y}"),
-            marker = list(color = 'rgb(204,204,204)'),
-            visible = 'legendonly')
 ```
