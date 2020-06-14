@@ -326,7 +326,7 @@ plot_ly(data = recov) %>%
   
 ```
 
-### Plot 4: Daily number of new cases and recoveries
+### Plot 4: Daily number of new cases and recoveries (since 13 May 2020)
 
 ```{r}
 recov2 <- data %>% 
